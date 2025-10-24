@@ -1,0 +1,120 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jmetalpy"
+version = "1.8.0"
+description = "Python version of the jMetal framework"
+readme = "README.md"
+authors = [
+    {name = "Antonio J. Nebro", email = "ajnebro@uma.es"},
+    {name = "Antonio Benítez", email = "antonio.b@uma.es"}
+]
+
+maintainers = [
+    {name = "Antonio J. Nebro", email = "ajnebro@uma.es"},
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
+]
+requires-python = ">=3.10"
+dependencies = [
+    "tqdm",
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
+    "plotly>=5.22.0",
+    "matplotlib>=3.0.2",
+    "scipy>=1.15.3",
+    "statsmodels>=0.9.0",
+    "mockito",
+    "PyHamcrest",
+    "moocore>=0.1.8"
+]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+
+[project.optional-dependencies]
+core = [
+    "tqdm",
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
+    "plotly>=5.22.0",
+    "matplotlib>=3.0.2",
+    "scipy>=1.15.3",
+    "statsmodels>=0.9.0",
+    "mockito",
+    "moocore>=0.1.8",
+]
+
+docs = [
+    "tqdm",
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
+    "plotly>=5.22.0",
+    "matplotlib>=3.0.2",
+    "scipy>=1.15.3",
+    "statsmodels>=0.9.0",
+    "mockito",
+    "jupyter",
+    "nbsphinx"
+]
+
+distributed = [
+    "tqdm",
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
+    "plotly>=5.22.0",
+    "matplotlib>=3.0.2",
+    "scipy>=1.15.3",
+    "statsmodels>=0.9.0",
+    "mockito",
+    "dask[complete]>=2024.3.0",
+    "distributed>=2024.3.0",
+    "pyspark>=3.4.0"
+]
+
+test = [
+    "tqdm",
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
+    "plotly>=5.22.0",
+    "matplotlib>=3.0.2",
+    "scipy>=1.15.3",
+    "statsmodels>=0.9.0",
+    "mockito",
+    "PyHamcrest",
+    "moocore>=0.1.8",
+    "pytest>=7.0",
+    "pytest-cov>=4.0"
+]
+
+complete = [
+    "tqdm",
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
+    "plotly>=3.3.0",
+    "matplotlib>=3.0.2",
+    "scipy>=1.15.3",
+    "statsmodels>=0.9.0",
+    "mockito",
+    "jupyter",
+    "nbsphinx",
+    "dask[complete]>=2024.3.0",
+    "distributed>=2024.3.0",
+    "pyspark>=3.4.0"
+]
+
+
+
+
