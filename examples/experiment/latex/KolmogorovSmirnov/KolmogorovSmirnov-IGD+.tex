@@ -1,0 +1,40 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{tabularx}
+\usepackage{colortbl}
+\usepackage[table*]{xcolor}
+\xdefinecolor{gray95}{gray}{0.65}
+\xdefinecolor{gray25}{gray}{0.8}
+\title{Kolmogorov-Smirnov Test}
+\author{}
+\begin{document}
+\maketitle
+\section{Table}
+\begin{table}[!htp]
+  \caption{Kolmogorov-Smirnov Test of the IGD+ quality indicator. The algorithm in the last column is the reference algorithm and each cell contain the p-value obtained when applying the test with the reference algorithm. Cells with gray background highlight p-values less than 0.05 (i.e., the null hypothesis -- the two distributions are identical -- is rejected).}
+  \label{table:IGD+}
+  \centering
+  \begin{tiny}
+  \begin{tabular}{c|ccc}
+      & \textbf{NSGAII} & \textbf{SMPSO} & \textbf{AutoNSGAII} \\\hline
+\textbf{WFG1} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ \cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ -$ \\
+\textbf{WFG2} & $\cellcolor{gray25} 7.91e\makebox[0.1cm]{-}13 $ & $ \cellcolor{gray25} 7.91e\makebox[0.1cm]{-}13 $ & $ -$ \\
+\textbf{WFG3} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ \cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ -$ \\
+\textbf{WFG4} & $1.56e\makebox[0.1cm]{-}01 $ & $ \cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ -$ \\
+\textbf{WFG5} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ \cellcolor{gray25} 1.92e\makebox[0.1cm]{-}03 $ & $ -$ \\
+\textbf{WFG6} & $1.56e\makebox[0.1cm]{-}01 $ & $ \cellcolor{gray25} 1.63e\makebox[0.1cm]{-}04 $ & $ -$ \\
+\textbf{WFG7} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ \cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ -$ \\
+\textbf{WFG8} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ \cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ -$ \\
+\textbf{WFG9} & $\cellcolor{gray25} 1.48e\makebox[0.1cm]{-}02 $ & $ \cellcolor{gray25} 3.35e\makebox[0.1cm]{-}08 $ & $ -$ \\
+\textbf{DTLZ1} & $\cellcolor{gray25} 1.94e\makebox[0.1cm]{-}11 $ & $ \cellcolor{gray25} 1.94e\makebox[0.1cm]{-}11 $ & $ -$ \\
+\textbf{DTLZ2} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ \cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ -$ \\
+\textbf{DTLZ3} & $\cellcolor{gray25} 1.94e\makebox[0.1cm]{-}11 $ & $ \cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ -$ \\
+\textbf{DTLZ4} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ \cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ -$ \\
+\textbf{DTLZ5} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ \cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ -$ \\
+\textbf{DTLZ6} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ \cellcolor{gray25} 3.35e\makebox[0.1cm]{-}08 $ & $ -$ \\
+\textbf{DTLZ7} & $\cellcolor{gray25} 1.58e\makebox[0.1cm]{-}14 $ & $ 2.85e\makebox[0.1cm]{-}01 $ & $ -$ \\
+  \hline
+  \end{tabular}
+  \end{tiny}
+\end{table}
+\end{document}

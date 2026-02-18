@@ -35,7 +35,7 @@ if __name__ == "__main__":
             return solution
 
 
-    problem = TSPWithConstraints(instance="resources/TSP_instances/kroA100.tsp")
+    problem = TSPWithConstraints(instance="../../../resources/TSP_instances/kroA100.tsp")
 
     solution_comparator = MultiComparator([OverallConstraintViolationComparator(), ObjectiveComparator(0)])
     algorithm = GeneticAlgorithm(
