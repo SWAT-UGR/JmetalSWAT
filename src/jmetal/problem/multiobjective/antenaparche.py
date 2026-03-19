@@ -1,5 +1,5 @@
 import sys
-import np
+import numpy as np
 import os
 sys.path.append(r"C:\Program Files\CST Studio Suite 2026\AMD64\python_cst_libraries")
 import cst.interface
@@ -9,14 +9,14 @@ from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 
 
-class antena(FloatProblem()):
+class antenaparche(FloatProblem):
     """Problem antena.
     
     """
     def __init__(self, number_of_variables: int = 22):
         """:param number_of_variables: Number of decision variables of the problem."""
         
-        super(antena, self).__init__()
+        super(antenaparche, self).__init__()
         
         self.obj_directions = [self.MINIMIZE, self.MINIMIZE]
         self.obj_labels = ["S11", "axial_ratios"]
@@ -80,7 +80,7 @@ class antena(FloatProblem()):
     def number_of_constraints(self) -> int:
         return 0 # Por ahora
     
-    def redondear_al_paso(valor, paso):
+    def redondear_al_paso(self, valor, paso):
         """
         Redondea un número al 'Step' más cercano.
         """
@@ -271,4 +271,4 @@ class antena(FloatProblem()):
         return solution
     
     def name(self):
-        return "Antena"
+        return "AntenaParche"

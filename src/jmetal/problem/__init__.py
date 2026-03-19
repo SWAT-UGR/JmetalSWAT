@@ -5,6 +5,7 @@ from .multiobjective.unconstrained import Fonseca, Kursawe, Schaffer, Viennet2, 
 from .multiobjective.zdt import ZDT1, ZDT2, ZDT3, ZDT4, ZDT5, ZDT6
 from .singleobjective.tsp import TSP
 from .singleobjective.unconstrained import OneMax, Sphere
+from .multiobjective.antenaparche import antenaparche
 
 __all__ = [
     "Srinivas",
@@ -31,4 +32,5 @@ __all__ = [
     "OneMax",
     "Sphere",
     "TSP",
+    "antenaparche",
 ]
