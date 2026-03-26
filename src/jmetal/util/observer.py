@@ -344,3 +344,71 @@ class LivePlotObserver(Observer):
             ax.legend()
             
             plt.show()
+            
+            
+class AntenaGraficasObserver(Observer):
+    def __init__(self, frequency: int, output_directory: str = "Plots_CST"):
+        """
+        :param frequency: Cada cuántas evaluaciones queremos generar la gráfica.
+        :param output_directory: Carpeta donde se guardarán las imágenes .png.
+        """
+        self.frequency = frequency
+        self.output_directory = output_directory
+        
+        # Crear el directorio si no existe
+        if not os.path.isdir(self.output_directory):
+            os.makedirs(self.output_directory, exist_ok=True)
+
+    def update(self, *args, **kwargs):
+        evaluaciones = kwargs["EVALUATIONS"]
+        soluciones = kwargs["SOLUTIONS"]
+
+        if evaluaciones % self.frequency == 0 and soluciones:
+            
+            # Cogemos la mejor antena de la generación actual
+            mejor_antena = soluciones[0]
+            
+            # Rescatamos los arrays que escondimos en el evaluate()
+            frecuencia = mejor_antena.attributes.get('frecuencia')
+            s11_imag = mejor_antena.attributes.get('s11_imag')
+            s11_real = mejor_antena.attributes.get('s11_real')
+            s11_db = mejor_antena.attributes.get('s11_db')
+            frec_farfield = mejor_antena.attributes.get('frec_farfield')
+            axial_ratios = mejor_antena.attributes.get('axial_ratios')
+            
+            if frecuencia is None:
+                return # Si la antena dio error en CST y no hay datos, saltamos
+
+            print(f"--> [Observer] Guardando 4 gráficas PNG de la evaluación {evaluaciones}...")
+
+            # S11 Imaginario
+            plt.figure()
+            plt.plot(frecuencia, s11_imag, color='blue')
+            plt.title(f'S1,1 Imaginario - Eval {evaluaciones}')
+            plt.grid(True)
+            plt.savefig(f"{self.output_directory}/S11_Imag_eval_{evaluaciones}.png")
+            plt.close() 
+            
+            # S11 Real
+            plt.figure()
+            plt.plot(frecuencia, s11_real, color='red')
+            plt.title(f'S1,1 Real - Eval {evaluaciones}')
+            plt.grid(True)
+            plt.savefig(f"{self.output_directory}/S11_Real_eval_{evaluaciones}.png")
+            plt.close()
+
+            # S11 dB
+            plt.figure()
+            plt.plot(frecuencia, s11_db, color='red')
+            plt.title(f'S1,1 (dB) - Eval {evaluaciones}')
+            plt.grid(True)
+            plt.savefig(f"{self.output_directory}/S11_dB_eval_{evaluaciones}.png")
+            plt.close()
+            
+            # Axial Ratio
+            plt.figure()
+            plt.plot(frec_farfield, axial_ratios, color='green', marker='o')
+            plt.title(f'Axial Ratio vs Frec - Eval {evaluaciones}')
+            plt.grid(True)
+            plt.savefig(f"{self.output_directory}/Axial_Ratio_eval_{evaluaciones}.png")
+            plt.close()

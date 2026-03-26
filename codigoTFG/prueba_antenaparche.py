@@ -1,9 +1,8 @@
 from jmetal.algorithm.multiobjective.nsgaii import NSGAII
-from jmetal.lab.visualization import InteractivePlot, Plot
 from jmetal.operator.crossover import SBXCrossover
 from jmetal.operator.mutation import PolynomialMutation
 from jmetal.problem import antenaparche
-from jmetal.util.observer import ProgressBarObserver, VisualizerObserver, SaveResultsObserver, LivePlotObserver
+from jmetal.util.observer import ProgressBarObserver, SaveResultsObserver, AntenaGraficasObserver
 from jmetal.util.termination_criterion import StoppingByEvaluations
 
 """
@@ -24,13 +23,12 @@ if __name__ == "__main__":
     )
 
     algorithm.observable.register(observer=ProgressBarObserver(max=max_evaluations))
-    algorithm.observable.register(
-        observer=VisualizerObserver(reference_front=problem.reference_front, display_frequency=100)
-    )
+    
     saver = SaveResultsObserver(frequency=500)
     algorithm.observable.register(observer=saver)
-    plotter = LivePlotObserver(frequency=500, max_evaluations=max_evaluations)
-    algorithm.observable.register(observer=plotter)
+    
+    plotter_antena = AntenaGraficasObserver(frequency=500, output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Plots cst")
+    algorithm.observable.register(observer=plotter_antena)
                                   
     algorithm.run()
     front = algorithm.result()

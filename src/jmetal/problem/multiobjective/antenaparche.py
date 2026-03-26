@@ -4,9 +4,10 @@ import os
 sys.path.append(r"C:\Program Files\CST Studio Suite 2026\AMD64\python_cst_libraries")
 import cst.interface
 import re
-
+import time
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
+from datetime import datetime
 
 
 class antenaparche(FloatProblem):
@@ -70,6 +71,8 @@ class antenaparche(FloatProblem):
             5.0,   # 20: X_feeding (max)
             5.0    # 21: Y_feeding (max)
         ]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.ruta_csv_tiempos = rf"C:\Users\jmate\Desktop\teleco\TFG\Tiempos_prueba\estadisticas_tiempos_{timestamp}.csv"
         
     def number_of_objectives(self) -> int:
         return len(self.obj_directions)
@@ -179,6 +182,7 @@ class antenaparche(FloatProblem):
             
             
     def evaluate(self, solution: FloatSolution) -> FloatSolution:
+        tiempo_inicio = time.time()
         #vars_algoritmo = solution.variables
         
         # Por ahora para hacer pruebas
@@ -222,6 +226,7 @@ class antenaparche(FloatProblem):
         
         ruta_archivo_real = r"C:\Users\jmate\Desktop\teleco\TFG\CST\RealS11.txt"
         datos_real = np.loadtxt(ruta_archivo_real, skiprows=2)
+        frecuencia = datos_imag[:, 0]
         
         # Extraer las columnas
         s11_imag = datos_imag[:, 1]
@@ -232,7 +237,6 @@ class antenaparche(FloatProblem):
         s11_complejo = s11_real + 1j * s11_imag
         
         s11_db = 20 * np.log10(np.abs(s11_complejo))
-        solution.objectives[0]= np.sum(s11_db)/len(s11_db)
         
         rutas_farfield = [
             r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f4_8.txt",
@@ -266,9 +270,31 @@ class antenaparche(FloatProblem):
         # zip empareja los datos, sorted los ordena guiándose por la frecuencia, y zip(*...) los vuelve a separar
         frecuencias_farfield, axial_ratios = zip(*sorted(zip(frecuencias_farfield, axial_ratios)))
         
+        solution.objectives[0]= np.sum(s11_db)/len(s11_db)
         solution.objectives[1] = np.sum(axial_ratios)/len(axial_ratios)
         
-        return solution
+        solution.attributes['frecuencia'] = frecuencia
+        solution.attributes['s11_imag'] = s11_imag
+        solution.attributes['s11_real'] = s11_real
+        solution.attributes['s11_db'] = s11_db
+        solution.attributes['frec_farfield'] = frecuencias_farfield
+        solution.attributes['axial_ratios'] = axial_ratios
+        
+        tiempo_fin = time.time()
+        tiempo_total_segundos = tiempo_fin - tiempo_inicio
+        tiempo_total_minutos = tiempo_total_segundos / 60.0
+        
+        archivo_nuevo = not os.path.exists(self.ruta_csv_tiempos)
+        
+        with open(self.ruta_csv_tiempos, "a", encoding="utf-8") as f:
+            if archivo_nuevo:
+                
+                f.write("Tiempo_Segundos;Tiempo_Minutos\n")
+            
+            seg_str = f"{tiempo_total_segundos:.2f}".replace('.', ',')
+            min_str = f"{tiempo_total_minutos:.2f}".replace('.', ',')
+            
+            f.write(f"{seg_str};{min_str}\n")
     
     def name(self):
         return "AntenaParche"
