@@ -5,6 +5,7 @@ sys.path.append(r"C:\Program Files\CST Studio Suite 2026\AMD64\python_cst_librar
 import cst.interface
 import re
 import time
+import math
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 from datetime import datetime
@@ -81,7 +82,7 @@ class antenaparche(FloatProblem):
         return len(self.lower_bound)
     
     def number_of_constraints(self) -> int:
-        return 0 # Por ahora
+        return 19 # Por ahora
     
     def redondear_al_paso(self, valor, paso):
         """
@@ -143,7 +144,7 @@ class antenaparche(FloatProblem):
         return valores_redondeados
     
     
-    def ejecutar_cst_en_segundo_plano(ruta_macro):
+    def ejecutar_cst_en_segundo_plano(self, ruta_macro):
         """
         Abre CST oculto, crea un proyecto en blanco, ejecuta la macro para que dibuje
         y simule la antena, y luego cierra todo para liberar memoria.
@@ -183,33 +184,63 @@ class antenaparche(FloatProblem):
             
     def evaluate(self, solution: FloatSolution) -> FloatSolution:
         tiempo_inicio = time.time()
-        #vars_algoritmo = solution.variables
+        
+        self.__evaluate_constraints(solution)
+        
+        # La función all() devuelve True solo si todos los números de la lista son >= 0
+        es_valida = all(c >= 0 for c in solution.constraints)
+        
+        if not es_valida:
+            
+            # Le asignamos notas para descartarla sin llamar a CST.
+            solution.objectives[0] = 10e8
+            solution.objectives[1] = 10e8
+            
+            # Anulamos los datos gráficos para que no se dibujen
+            solution.attributes['frecuencia'] = None 
+            
+            tiempo_fin = time.time()
+            t_seg = tiempo_fin - tiempo_inicio
+            t_min = t_seg / 60.0
+            
+            archivo_nuevo = not os.path.exists(self.ruta_csv_tiempos)
+            with open(self.ruta_csv_tiempos, "a", encoding="utf-8") as f:
+                if archivo_nuevo:
+                    f.write("Tiempo_Segundos;Tiempo_Minutos\n")
+                seg_str = f"{t_seg:.2f}".replace('.', ',')
+                min_str = f"{t_min:.2f}".replace('.', ',')
+                f.write(f"{seg_str};{min_str}\n")
+                
+            return solution 
+        
+        vars_algoritmo = solution.variables
         
         # Por ahora para hacer pruebas
-        vars_algoritmo = [
-            13.5,  # L_metal
-            13.5,  # W_metal
-            40.0,  # L_GND
-            40.0,  # W_GND
-            2.5,   # Cx
-            2.5,   # Cy
-            4.5,   # Lslot1
-            4.5,   # Lslot2
-            4.5,   # Lslot3
-            4.5,   # Lslot4
-            1.0,   # Wslot1
-            1.0,   # Wslot2
-            1.0,   # Wslot3
-            1.0,   # Wslot4
-            45.0,  # alpha_s1
-            45.0,  # alpha_s2
-            45.0,  # alpha_s3
-            45.0,  # alpha_s4
-            0.0,   # Off_V
-            0.0,   # Off_H
-            2.5,   # x_feed
-            0.5    # y_feed
-        ]
+        # vars_algoritmo = [
+        #     13.5,  # L_metal
+        #     13.5,  # W_metal
+        #     40.0,  # L_GND
+        #     40.0,  # W_GND
+        #     2.5,   # Cx
+        #     2.5,   # Cy
+        #     4.5,   # Lslot1
+        #     4.5,   # Lslot2
+        #     4.5,   # Lslot3
+        #     4.5,   # Lslot4
+        #     1.0,   # Wslot1
+        #     1.0,   # Wslot2
+        #     1.0,   # Wslot3
+        #     1.0,   # Wslot4
+        #     45.0,  # alpha_s1
+        #     45.0,  # alpha_s2
+        #     45.0,  # alpha_s3
+        #     45.0,  # alpha_s4
+        #     0.0,   # Off_V
+        #     0.0,   # Off_H
+        #     2.5,   # x_feed
+        #     0.5    # y_feed
+        # ]
+        
         # Rutas de los archivos
         ruta_plantilla_macro = r"C:\Users\jmate\Desktop\teleco\TFG\CST\MacroPatchCP_Multilayer_Cross.txt"
         ruta_macro_temporal  = r"C:\Users\jmate\Desktop\teleco\TFG\CST\Macro_To_Run.bas"
@@ -218,7 +249,7 @@ class antenaparche(FloatProblem):
         self.generar_macro_cst(vars_algoritmo, ruta_plantilla_macro, ruta_macro_temporal)
         
         # CST se abre oculto, simula, exporta los .txt y se cierra
-        # self.ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
+        self.ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
        
         # Cargar los datos de S11
         ruta_archivo_imag = r"C:\Users\jmate\Desktop\teleco\TFG\CST\ImagS11.txt"
@@ -266,9 +297,9 @@ class antenaparche(FloatProblem):
             frecuencias_farfield.append(frec_val)
             axial_ratios.append(primer_ax_ratio)
         
-        # Ordenar las listas por frecuencia de menor a mayor (por si las rutas estuvieran desordenadas)
-        # zip empareja los datos, sorted los ordena guiándose por la frecuencia, y zip(*...) los vuelve a separar
-        frecuencias_farfield, axial_ratios = zip(*sorted(zip(frecuencias_farfield, axial_ratios)))
+        # # Ordenar las listas por frecuencia de menor a mayor (por si las rutas estuvieran desordenadas)
+        # # zip empareja los datos, sorted los ordena guiándose por la frecuencia, y zip(*...) los vuelve a separar
+        # frecuencias_farfield, axial_ratios = zip(*sorted(zip(frecuencias_farfield, axial_ratios)))
         
         solution.objectives[0]= np.sum(s11_db)/len(s11_db)
         solution.objectives[1] = np.sum(axial_ratios)/len(axial_ratios)
@@ -295,6 +326,88 @@ class antenaparche(FloatProblem):
             min_str = f"{tiempo_total_minutos:.2f}".replace('.', ',')
             
             f.write(f"{seg_str};{min_str}\n")
+            
+    def __evaluate_constraints(self, solution: FloatSolution) -> bool:
+        """
+        Evalúa las restricciones físicas de la antena. 
+        Devuelve True si la antena es viable, o False si hay colisión.
+        """
+        x = solution.variables
+        
+        # Mapeo de variables para que las fórmulas sean legibles
+        L_metal, W_metal = x[0], x[1]
+        L_GND, W_GND = x[2], x[3]
+        Cx, Cy = x[4], x[5]
+        Lslot1, Lslot2, Lslot3, Lslot4 = x[6], x[7], x[8], x[9]
+        Wslot1, Wslot2, Wslot3, Wslot4 = x[10], x[11], x[12], x[13]
+        
+        # Convertimos los ángulos de grados a radianes para math.sin y math.cos
+        a1 = math.radians(x[14])
+        a2 = math.radians(x[15])
+        a3 = math.radians(x[16])
+        a4 = math.radians(x[17])
+        
+        Off_V, Off_H = x[18], x[19]
+        x_feed, y_feed = x[20], x[21]
+
+        # Constantes de seguridad
+        R_safe = 1.2
+        SM = 0.5
+        
+        constraints = [0.0] * self.number_of_constraints()
+
+        # 2.1 Límites del parche
+        constraints[0] = (W_metal / 2.0 - R_safe) - abs(x_feed)
+        constraints[1] = (L_metal / 2.0 - R_safe) - abs(y_feed)
+        
+        # 2.2 Evitar cortes en las esquinas (Evaluamos los 4 cuadrantes con abs)
+        if (abs(x_feed) > W_metal/2.0 - Cx - R_safe) and (abs(y_feed) > L_metal/2.0 - Cy - R_safe):
+            constraints[2] = -1.0 # FAIL (Choca con esquina)
+        else:
+            constraints[2] = 1.0  # OK
+
+        # 2.3 Colisión con los slots (Función de ayuda interna)
+        def check_colision_slot(dx, dy, theta_deg, L_slot, W_slot):
+            theta_rad = math.radians(theta_deg)
+            # Transformación vectorial
+            u = dx * math.cos(-theta_rad) - dy * math.sin(-theta_rad)
+            v = dx * math.sin(-theta_rad) + dy * math.cos(-theta_rad)
+            
+            # Se produce colisión si se cumplen TODAS las inecuaciones
+            if (u < R_safe) and (u > -(L_slot + R_safe)) and (abs(v) < W_slot/2.0 + R_safe):
+                return -1.0 # FAIL
+            return 1.0 # OK
+
+        # Slot 1
+        constraints[3] = check_colision_slot(x_feed - Off_V, y_feed - L_metal/2.0, 270.0 + x[14], Lslot1, Wslot1)
+        constraints[4] = check_colision_slot(x_feed + Off_V, y_feed + L_metal/2.0, 90.0 + x[15], Lslot2, Wslot2)
+        
+        # Colisión Slot 3 (Der) y Slot 4 (Izq)
+        constraints[5] = check_colision_slot(x_feed - W_metal/2.0, y_feed - Off_H, 180.0 + x[16], Lslot3, Wslot3)
+        constraints[6] = check_colision_slot(x_feed + W_metal/2.0, y_feed + Off_H, x[17], Lslot4, Wslot4)
+        
+        # 2.4 Integridad del núcleo (no cruzar el centro)
+        constraints[7] = (L_metal / 2.0 - 2.0) - Lslot1 * math.cos(a1)
+        constraints[8] = (L_metal / 2.0 - 2.0) - Lslot2 * math.cos(a2)
+        constraints[9] = (W_metal / 2.0 - 2.0) - Lslot3 * math.cos(a3)
+        constraints[10]= (W_metal / 2.0 - 2.0) - Lslot4 * math.cos(a4)
+        
+        # 2.5 Conflictos de borde (crowding)
+        # Usamos max(sin, 1e-6) para prevenir errores fatales de división por cero
+        constraints[11] = (W_metal / 2.0) - (Cx + abs(Off_H) + Wslot1 / (2.0 * max(math.sin(a1), 1e-6)) + SM)
+        constraints[12] = (W_metal / 2.0) - (Cx + abs(Off_H) + Wslot2 / (2.0 * max(math.sin(a2), 1e-6)) + SM)
+        constraints[13] = (L_metal / 2.0) - (Cy + abs(Off_V) + Wslot3 / (2.0 * max(math.sin(a3), 1e-6)) + SM)
+        constraints[14] = (L_metal / 2.0) - (Cy + abs(Off_V) + Wslot4 / (2.0 * max(math.sin(a4), 1e-6)) + SM)
+        # 2.6 Restricciones de consistencia
+        constraints[15] = W_GND - (W_metal + 2.0)
+        constraints[16] = L_GND - (L_metal + 2.0)
+        
+        relacion_aspecto = L_metal / W_metal
+        constraints[17] = relacion_aspecto - 0.85
+        constraints[18] = 1.15 - relacion_aspecto
+
+        # Asignar al array nativo de JMetal
+        solution.constraints = constraints
     
     def name(self):
         return "AntenaParche"
