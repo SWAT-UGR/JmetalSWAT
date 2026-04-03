@@ -9,8 +9,20 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-sys.path.append(r"C:\Program Files\CST Studio Suite 2026\AMD64\python_cst_libraries")
-import cst.interface
+import logging
+
+# Añadimos la ruta de CST solo si no está ya añadida
+ruta_cst = r"C:\Program Files\CST Studio Suite 2026\AMD64\python_cst_libraries"
+if ruta_cst not in sys.path:
+    sys.path.append(ruta_cst)
+
+# Intentamos importar CST. Si falla (como en GitHub), lo ignoramos silenciosamente
+try:
+    import cst.interface
+    CST_AVAILABLE = True
+except ImportError:
+    CST_AVAILABLE = False
+    logging.warning("Librería de CST no encontrada. Las simulaciones reales no funcionarán en este entorno.")
 import time
 import re
 
