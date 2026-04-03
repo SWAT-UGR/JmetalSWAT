@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['src\\jmetal\\problem\\multiobjective\\lircmop.py', 'src\\jmetal\\problem\\multiobjective\\zdt.py', 'src\\jmetal\\util\\observer.py', 'src\\jmetal\\problem\\multiobjective\\antenaparche.py', 'codigoTFG\\prueba_antenaparche.py', 'src\\jmetal\\problem\\multiobjective\\constrained.py']
+recent_files = ['src\\jmetal\\problem\\multiobjective\\lircmop.py', 'src\\jmetal\\util\\observer.py', 'src\\jmetal\\problem\\multiobjective\\antenaparche.py', 'codigoTFG\\prueba_antenaparche.py', 'src\\jmetal\\algorithm\\singleobjective\\genetic_algorithm.py', 'src\\jmetal\\operator\\mutation.py', 'src\\jmetal\\operator\\crossover.py', 'src\\jmetal\\algorithm\\multiobjective\\smpso.py', 'examples\\multiobjective\\smpso\\smpso_zdt4.py']
 
 [main]
 version = 0.2.0

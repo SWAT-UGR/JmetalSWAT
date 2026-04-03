@@ -1,8 +1,8 @@
 from jmetal.algorithm.multiobjective.nsgaii import NSGAII
-from jmetal.operator.crossover import SBXCrossover
-from jmetal.operator.mutation import PolynomialMutation
-from jmetal.problem import antenaparche
-from jmetal.util.observer import ProgressBarObserver, PlotFrontToFileObserver, SaveResultsObserver, AntenaGraficasObserver
+from jmetal.operator.crossover import IntegerSBXCrossover
+from jmetal.operator.mutation import IntegerPolynomialMutation
+from jmetal.problem import antenaparcheInteger
+from jmetal.util.observer import ProgressBarObserver, PlotFrontToFileObserver, GuardarResultadosFisicosObserver, AntenaGraficasObserver
 from jmetal.util.termination_criterion import StoppingByEvaluations
 
 """
@@ -10,21 +10,25 @@ from jmetal.util.termination_criterion import StoppingByEvaluations
 """
 
 if __name__ == "__main__":
-    problem = antenaparche()
+    problem = antenaparcheInteger()
     
-    max_evaluations = 500
+    max_evaluations = 10
     algorithm = NSGAII(
         problem=problem,
-        population_size=50,
-        offspring_population_size=50,
-        mutation=PolynomialMutation(probability=1.0 / problem.number_of_variables(), distribution_index=20),
-        crossover=SBXCrossover(probability=1.0, distribution_index=20),
+        population_size=4,
+        offspring_population_size=4,
+        mutation=IntegerPolynomialMutation(probability=3.0 / problem.number_of_variables(), distribution_index=10),
+        crossover=IntegerSBXCrossover(probability=1.0, distribution_index=10),
         termination_criterion=StoppingByEvaluations(max_evaluations=max_evaluations),
     )
 
     algorithm.observable.register(observer=ProgressBarObserver(max=max_evaluations))
     
-    saver = SaveResultsObserver(frequency=50)
+    saver = GuardarResultadosFisicosObserver(
+        frequency=5, 
+        steps_del_problema=problem.steps, # Le pasamos los steps desde la clase del problema
+        output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\intermediate_results"
+    )
     algorithm.observable.register(observer=saver)
     
     plotter_antena = AntenaGraficasObserver(frequency=50, output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Plots cst")

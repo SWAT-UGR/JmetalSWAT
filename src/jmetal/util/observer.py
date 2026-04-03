@@ -368,6 +368,7 @@ class AntenaGraficasObserver(Observer):
             # Cogemos la mejor antena de la generación actual
             mejor_antena = soluciones[0]
             
+            
             # Rescatamos los arrays que escondimos en el evaluate()
             frecuencia = mejor_antena.attributes.get('frecuencia')
             s11_imag = mejor_antena.attributes.get('s11_imag')
@@ -412,3 +413,41 @@ class AntenaGraficasObserver(Observer):
             plt.grid(True)
             plt.savefig(f"{self.output_directory}/Axial_Ratio_eval_{evaluaciones}.png")
             plt.close()
+            
+class GuardarResultadosFisicosObserver(Observer):
+    def __init__(self, frequency: int, steps_del_problema: list, output_directory: str = "intermediate_results"):
+        """
+        Guarda los archivos FUN y VAR, pero traduciendo los enteros a 
+        las dimensiones físicas reales usando los steps del problema.
+        """
+        self.frequency = frequency
+        self.steps = steps_del_problema
+        self.output_directory = output_directory
+        
+        if not os.path.isdir(self.output_directory):
+            os.makedirs(self.output_directory, exist_ok=True)
+
+    def update(self, *args, **kwargs):
+        evaluations = kwargs["EVALUATIONS"]
+        solutions = kwargs["SOLUTIONS"]
+        problem = kwargs["PROBLEM"]
+
+        if evaluations % self.frequency == 0 and solutions:
+            problem_name = problem.name()
+            print(f"--> [Observer] Guardando resultados físicos para {problem_name} en evaluación {evaluations}...")
+            
+            fun_filename = f"{self.output_directory}/FUN.{problem_name}.{evaluations}"
+            print_function_values_to_file(solutions, fun_filename)
+
+            # Guardar archivo VAR con las medidas FÍSICAS
+            var_filename = f"{self.output_directory}/VAR.{problem_name}.{evaluations}"
+            
+            with open(var_filename, "w") as f:
+                for s in solutions: # Recorremos la población antena por antena
+                    # Traducimos de entero a físico para esta antena concreta
+                    vars_fisicas = [var * step for var, step in zip(s.variables, self.steps)]
+                    
+                    # Lo convertimos a texto con 3 decimales, separado por tabulaciones, y escribimos
+                    linea = "\t".join([f"{v:.3f}" for v in vars_fisicas])
+                    f.write(linea + "\n")
+                

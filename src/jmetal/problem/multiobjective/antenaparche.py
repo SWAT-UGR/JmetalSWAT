@@ -6,12 +6,12 @@ import cst.interface
 import re
 import time
 import math
-from jmetal.core.problem import FloatProblem
-from jmetal.core.solution import FloatSolution
+from jmetal.core.problem import IntegerProblem
+from jmetal.core.solution import IntegerSolution
 from datetime import datetime
 
 
-class antenaparche(FloatProblem):
+class antenaparche(IntegerProblem):
     """Problem antena.
     
     """
@@ -22,8 +22,9 @@ class antenaparche(FloatProblem):
         
         self.obj_directions = [self.MINIMIZE, self.MINIMIZE]
         self.obj_labels = ["S11", "axial_ratios"]
+        self.steps = [0.1, 0.1, 1.0, 1.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 0.2, 0.2, 0.05, 0.05]
         
-        self.lower_bound = [
+        lower_bound_real = [
             12.0,  # 0: L_metal (min)
             12.0,  # 1: W_metal (min)
             30.0,  # 2: L_GND (min)
@@ -48,7 +49,7 @@ class antenaparche(FloatProblem):
             -5.0    # 21: Y_feeding (min)
         ]
         
-        self.upper_bound = [
+        upper_bound_real = [
             15.5,  # 0: L_metal (max)
             15.5,  # 1: W_metal (max)
             55.0,  # 2: L_GND (max)
@@ -72,6 +73,10 @@ class antenaparche(FloatProblem):
             5.0,   # 20: X_feeding (max)
             5.0    # 21: Y_feeding (max)
         ]
+        
+        self.lower_bound = [int(round(val / step)) for val, step in zip(lower_bound_real, self.steps)]
+        self.upper_bound = [int(round(val / step)) for val, step in zip(upper_bound_real, self.steps)]
+        
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.ruta_csv_tiempos = rf"C:\Users\jmate\Desktop\teleco\TFG\Tiempos_prueba\estadisticas_tiempos_{timestamp}.csv"
         
@@ -82,44 +87,37 @@ class antenaparche(FloatProblem):
         return len(self.lower_bound)
     
     def number_of_constraints(self) -> int:
-        return 19 # Por ahora
-    
-    def redondear_al_paso(self, valor, paso):
-        """
-        Redondea un número al 'Step' más cercano.
-        """
-        return round(round(valor / paso) * paso, 3)
+        return 19 
 
     def generar_macro_cst(self, variables_jmetal, ruta_macro_original, ruta_macro_salida):
         """
         Lee la macro base, extrae las variables de JMetal, les aplica el 'Step' 
         y genera una nueva macro lista para CST.
         """
-        # Indexar variables de JMetal y aplicar el Step del Excel
-        # El orden (0 al 21) dependerá de cómo las declares en tu clase JMetalProblem
+        # Indexar variables de JMetal
         valores_redondeados = {
-            "L_metal":  self.redondear_al_paso(variables_jmetal[0], 0.1),
-            "W_metal":  self.redondear_al_paso(variables_jmetal[1], 0.1),
-            "L_GND":    self.redondear_al_paso(variables_jmetal[2], 1.0),
-            "W_GND":    self.redondear_al_paso(variables_jmetal[3], 1.0),
-            "Cx":       self.redondear_al_paso(variables_jmetal[4], 0.1),
-            "Cy":       self.redondear_al_paso(variables_jmetal[5], 0.1),
-            "Lslot1":   self.redondear_al_paso(variables_jmetal[6], 0.1),
-            "Lslot2":   self.redondear_al_paso(variables_jmetal[7], 0.1),
-            "Lslot3":   self.redondear_al_paso(variables_jmetal[8], 0.1),
-            "Lslot4":   self.redondear_al_paso(variables_jmetal[9], 0.1),
-            "Wslot1":   self.redondear_al_paso(variables_jmetal[10], 0.1),
-            "Wslot2":   self.redondear_al_paso(variables_jmetal[11], 0.1),
-            "Wslot3":   self.redondear_al_paso(variables_jmetal[12], 0.1),
-            "Wslot4":   self.redondear_al_paso(variables_jmetal[13], 0.1),
-            "alpha_s1": self.redondear_al_paso(variables_jmetal[14], 1.0),
-            "alpha_s2": self.redondear_al_paso(variables_jmetal[15], 1.0),
-            "alpha_s3": self.redondear_al_paso(variables_jmetal[16], 1.0),
-            "alpha_s4": self.redondear_al_paso(variables_jmetal[17], 1.0),
-            "Off_V":    self.redondear_al_paso(variables_jmetal[18], 0.2),
-            "Off_H":    self.redondear_al_paso(variables_jmetal[19], 0.2),
-            "X_feeding":   self.redondear_al_paso(variables_jmetal[20], 0.05),
-            "Y_feeding":  self.redondear_al_paso(variables_jmetal[21], 0.05)
+            "L_metal":  variables_jmetal[0],
+            "W_metal":  variables_jmetal[1],
+            "L_GND":    variables_jmetal[2],
+            "W_GND":    variables_jmetal[3],
+            "Cx":       variables_jmetal[4],
+            "Cy":       variables_jmetal[5],
+            "Lslot1":   variables_jmetal[6],
+            "Lslot2":   variables_jmetal[7],
+            "Lslot3":   variables_jmetal[8],
+            "Lslot4":   variables_jmetal[9],
+            "Wslot1":   variables_jmetal[10],
+            "Wslot2":   variables_jmetal[11],
+            "Wslot3":   variables_jmetal[12],
+            "Wslot4":   variables_jmetal[13],
+            "alpha_s1": variables_jmetal[14],
+            "alpha_s2": variables_jmetal[15],
+            "alpha_s3": variables_jmetal[16],
+            "alpha_s4": variables_jmetal[17],
+            "Off_V":    variables_jmetal[18],
+            "Off_H":    variables_jmetal[19],
+            "X_feeding":   variables_jmetal[20],
+            "Y_feeding":  variables_jmetal[21]
         }
 
         # Leer la macro original
@@ -182,10 +180,12 @@ class antenaparche(FloatProblem):
             print("CST cerrado. Memoria liberada.")
             
             
-    def evaluate(self, solution: FloatSolution) -> FloatSolution:
+    def evaluate(self, solution: IntegerSolution) -> IntegerSolution:
         tiempo_inicio = time.time()
         
-        self.__evaluate_constraints(solution)
+        vars_fisicas = [var * step for var, step in zip(solution.variables, self.steps)]
+        
+        self.__evaluate_constraints(vars_fisicas, solution)
         
         # La función all() devuelve True solo si todos los números de la lista son >= 0
         es_valida = all(c >= 0 for c in solution.constraints)
@@ -213,40 +213,12 @@ class antenaparche(FloatProblem):
                 
             return solution 
         
-        vars_algoritmo = solution.variables
-        
-        # Por ahora para hacer pruebas
-        # vars_algoritmo = [
-        #     13.5,  # L_metal
-        #     13.5,  # W_metal
-        #     40.0,  # L_GND
-        #     40.0,  # W_GND
-        #     2.5,   # Cx
-        #     2.5,   # Cy
-        #     4.5,   # Lslot1
-        #     4.5,   # Lslot2
-        #     4.5,   # Lslot3
-        #     4.5,   # Lslot4
-        #     1.0,   # Wslot1
-        #     1.0,   # Wslot2
-        #     1.0,   # Wslot3
-        #     1.0,   # Wslot4
-        #     45.0,  # alpha_s1
-        #     45.0,  # alpha_s2
-        #     45.0,  # alpha_s3
-        #     45.0,  # alpha_s4
-        #     0.0,   # Off_V
-        #     0.0,   # Off_H
-        #     2.5,   # x_feed
-        #     0.5    # y_feed
-        # ]
-        
         # Rutas de los archivos
         ruta_plantilla_macro = r"C:\Users\jmate\Desktop\teleco\TFG\CST\MacroPatchCP_Multilayer_Cross.txt"
         ruta_macro_temporal  = r"C:\Users\jmate\Desktop\teleco\TFG\CST\Macro_To_Run.bas"
         
         # Generamos la macro con los pasos del Excel
-        self.generar_macro_cst(vars_algoritmo, ruta_plantilla_macro, ruta_macro_temporal)
+        self.generar_macro_cst(vars_fisicas, ruta_plantilla_macro, ruta_macro_temporal)
         
         # CST se abre oculto, simula, exporta los .txt y se cierra
         self.ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
@@ -304,6 +276,7 @@ class antenaparche(FloatProblem):
         solution.objectives[0]= np.sum(s11_db)/len(s11_db)
         solution.objectives[1] = np.sum(axial_ratios)/len(axial_ratios)
         
+        solution.attributes['vars_fisicas'] = vars_fisicas
         solution.attributes['frecuencia'] = frecuencia
         solution.attributes['s11_imag'] = s11_imag
         solution.attributes['s11_real'] = s11_real
@@ -327,12 +300,12 @@ class antenaparche(FloatProblem):
             
             f.write(f"{seg_str};{min_str}\n")
             
-    def __evaluate_constraints(self, solution: FloatSolution) -> bool:
+    def __evaluate_constraints(self, vars_fisicas, solution: IntegerSolution) -> bool:
         """
         Evalúa las restricciones físicas de la antena. 
         Devuelve True si la antena es viable, o False si hay colisión.
         """
-        x = solution.variables
+        x = vars_fisicas
         
         # Mapeo de variables para que las fórmulas sean legibles
         L_metal, W_metal = x[0], x[1]
@@ -378,7 +351,7 @@ class antenaparche(FloatProblem):
                 return -1.0 # FAIL
             return 1.0 # OK
 
-        # Slot 1
+        # Slot 1 y 2
         constraints[3] = check_colision_slot(x_feed - Off_V, y_feed - L_metal/2.0, 270.0 + x[14], Lslot1, Wslot1)
         constraints[4] = check_colision_slot(x_feed + Off_V, y_feed + L_metal/2.0, 90.0 + x[15], Lslot2, Wslot2)
         
