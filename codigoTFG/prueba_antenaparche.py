@@ -2,7 +2,7 @@ from jmetal.algorithm.multiobjective.nsgaii import NSGAII
 from jmetal.operator.crossover import IntegerSBXCrossover
 from jmetal.operator.mutation import IntegerPolynomialMutation
 from jmetal.problem import antenaparcheInteger
-from jmetal.util.observer import ProgressBarObserver, PlotFrontToFileObserver, GuardarResultadosFisicosObserver, AntenaGraficasObserver
+from jmetal.util.observer import ProgressBarObserver, LivePlotObserver, GuardarResultadosFisicosObserver, AntenaGraficasObserver
 from jmetal.util.termination_criterion import StoppingByEvaluations
 
 """
@@ -36,9 +36,11 @@ if __name__ == "__main__":
     
     ruta_pareto = r"C:\Users\jmate\Desktop\teleco\TFG\Pareto_Fronts"
     
-    plotter_pareto = PlotFrontToFileObserver(
-        output_directory=ruta_pareto, 
-        step= 50
+    plotter_pareto = LivePlotObserver(
+        frequency=5, 
+        max_evaluations=max_evaluations, 
+        input_directory=r"C:\Users\jmate\Desktop\teleco\TFG\intermediate_results", 
+        output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Pareto_Plots"
     )
     algorithm.observable.register(observer=plotter_pareto)
                                   

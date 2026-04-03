@@ -247,16 +247,22 @@ class SaveResultsObserver(Observer):
             
 class LivePlotObserver(Observer):
     
-    def __init__(self, frequency: int, max_evaluations: int, input_directory: str = "intermediate_results"):
+    def __init__(self, frequency: int, max_evaluations: int, input_directory: str = "intermediate_results", output_directory: str = "Pareto_Plots"):
         """
         :param frequency: Number of evaluations between plot updates.
         :param max_evaluations: Total expected evaluations (to trigger the final summary plot).
         :param input_directory: Folder where the FUN files are located (must match the Saver directory).
+        :param output_directory: Folder where the PNG plots will be saved.
         """
         self.frequency = frequency
         self.max_evaluations = max_evaluations
         self.input_directory = input_directory
+        self.output_directory = output_directory
         self.history = []
+        
+        # Crear la carpeta para las gráficas si no existe
+        if not os.path.exists(self.output_directory):
+            os.makedirs(self.output_directory, exist_ok=True)
 
     def update(self, *args, **kwargs):
         evaluations = kwargs["EVALUATIONS"]
@@ -268,22 +274,18 @@ class LivePlotObserver(Observer):
             # Construct the filename of the FUN file we want to load
             fun_filename = f"{self.input_directory}/FUN.{problem_name}.{evaluations}"
             
-            # Read data from the file
             x_values = []
             y_values = []
-            
             
             if os.path.exists(fun_filename):
                 try:
                     with open(fun_filename, 'r') as file:
                         for line in file:
-                            # Split the line by whitespace (each column is an objective)
                             values = line.strip().split()
                             if len(values) >= 2:
                                 x_values.append(float(values[0]))
                                 y_values.append(float(values[1]))
                                 
-                    # If file was empty, skip
                     if not x_values:
                         return
                     
@@ -292,22 +294,26 @@ class LivePlotObserver(Observer):
                         "x": x_values,
                         "y": y_values
                     })
-                    
-                    
-                    # Create a new figure
+                 
                     fig, ax = plt.subplots(figsize=(6, 4))
                     
-                    # Plot the data read from disk
-                    ax.scatter(x_values, y_values, c='blue', alpha=0.6)
-                    ax.set_title(f"Pareto Front for evaluation: {evaluations}")
-                    ax.set_xlabel("Objective 1")
-                    ax.set_ylabel("Objective 2")
-                    ax.grid(True)
+                    ax.scatter(x_values, y_values, c='blue', alpha=0.6, label=f'Evaluación {evaluations}')
+                    ax.set_title(f"Frente de Pareto: Evaluación {evaluations}")
+                    
+                    # Le he puesto los nombres reales de tus objetivos para que quede de 10
+                    ax.set_xlabel("S11 (dB) [Minimizar]")
+                    ax.set_ylabel("Axial Ratio [Minimizar]")
+                    ax.grid(True, linestyle='--', alpha=0.7)
                     ax.legend()
                     
-                    # Show in console
-                    plt.show()
+                    # Guardamos la gráfica en lugar de mostrarla
+                    plot_filename = f"{self.output_directory}/front_{evaluations}.png"
+                    plt.savefig(plot_filename, bbox_inches='tight', dpi=300)
+                    plt.close(fig) 
                     
+                    print(f"--> Gráfica guardada: {plot_filename}")
+                    
+                    # Si llegamos al final, generamos el resumen
                     if evaluations >= self.max_evaluations:
                         self.plot_summary(problem_name)
                     
@@ -318,11 +324,10 @@ class LivePlotObserver(Observer):
         
     def plot_summary(self, problem_name):
         """Generates a combined plot showing the evolution of all stored fronts."""
-        print("--> Generating optimization summary plot...")
+        print("--> Generando gráfica resumen de la optimización...")
         
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=(10, 7))
         
-        # Generate a color gradient (from light to dark) to visualize progress
         total_plots = len(self.history)
         if total_plots > 0:
             colors = plt.cm.viridis(np.linspace(0, 1, total_plots))
@@ -334,16 +339,23 @@ class LivePlotObserver(Observer):
                     label=f"Eval {data['eval']}", 
                     color=colors[i], 
                     alpha=0.7,
-                    s=20 
+                    s=25 
                 )
                 
-            ax.set_title(f"Optimization Progress: {problem_name}")
-            ax.set_xlabel("Objective 1")
-            ax.set_ylabel("Objective 2")
-            ax.grid(True)
-            ax.legend()
+            ax.set_title(f"Evolución del Frente de Pareto: {problem_name}")
+            ax.set_xlabel("S11 (dB) [Minimizar]")
+            ax.set_ylabel("Axial Ratio [Minimizar]")
+            ax.grid(True, linestyle='--', alpha=0.7)
             
-            plt.show()
+            # Ponemos la leyenda fuera del gráfico para que no tape los puntos
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            
+            # Guardamos la gráfica resumen
+            summary_filename = f"{self.output_directory}/Summary_All_Fronts.png"
+            plt.savefig(summary_filename, bbox_inches='tight', dpi=300)
+            plt.close(fig)
+            
+            print(f"--> Gráfica resumen guardada con éxito en: {summary_filename}")
             
             
 class AntenaGraficasObserver(Observer):
