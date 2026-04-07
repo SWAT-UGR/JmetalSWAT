@@ -185,9 +185,16 @@ class antenaparcheInteger(IntegerProblem):
             # CERRAR EL PROYECTO SIN GUARDAR Y CERRAR CST
             # Como los resultados ya se han exportado a .txt por la macro, 
             # cerramos el proyecto directamente para liberar toda la RAM.
-            if 'cstProject' in locals():
-                cstProject.close()
-            cst.interface.DesignEnvironment.close(cstEnv)
+            cstProject = None 
+            cstEnv = None
+            
+            # 2. Asesinamos los procesos de CST en Windows (0 segundos, es inmediato)
+            os.system("taskkill /F /IM CST_DESIGN_ENVIRONMENT.exe /T >nul 2>&1")
+            os.system("taskkill /F /IM cst.exe /T >nul 2>&1")
+            
+            # 3. Pausa de 2 segundos de cortesía para que Windows limpie la RAM
+            time.sleep(2)
+            
             print("CST cerrado. Memoria liberada.")
             
             

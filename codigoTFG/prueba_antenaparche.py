@@ -12,11 +12,11 @@ from jmetal.util.termination_criterion import StoppingByEvaluations
 if __name__ == "__main__":
     problem = antenaparcheInteger()
     
-    max_evaluations = 10
+    max_evaluations = 100
     algorithm = NSGAII(
         problem=problem,
-        population_size=4,
-        offspring_population_size=4,
+        population_size=20,
+        offspring_population_size=20,
         mutation=IntegerPolynomialMutation(probability=3.0 / problem.number_of_variables(), distribution_index=10),
         crossover=IntegerSBXCrossover(probability=1.0, distribution_index=10),
         termination_criterion=StoppingByEvaluations(max_evaluations=max_evaluations),
@@ -25,19 +25,19 @@ if __name__ == "__main__":
     algorithm.observable.register(observer=ProgressBarObserver(max=max_evaluations))
     
     saver = GuardarResultadosFisicosObserver(
-        frequency=5, 
+        frequency=20, 
         steps_del_problema=problem.steps, # Le pasamos los steps desde la clase del problema
         output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\intermediate_results"
     )
     algorithm.observable.register(observer=saver)
     
-    plotter_antena = AntenaGraficasObserver(frequency=50, output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Plots cst")
+    plotter_antena = AntenaGraficasObserver(frequency=20, output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Plots cst")
     algorithm.observable.register(observer=plotter_antena)
     
     ruta_pareto = r"C:\Users\jmate\Desktop\teleco\TFG\Pareto_Fronts"
     
     plotter_pareto = LivePlotObserver(
-        frequency=5, 
+        frequency=20, 
         max_evaluations=max_evaluations, 
         input_directory=r"C:\Users\jmate\Desktop\teleco\TFG\intermediate_results", 
         output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Pareto_Plots"
