@@ -95,8 +95,8 @@ def ejecutar_cst_en_segundo_plano(ruta_macro):
     print("Iniciando CST en segundo plano...")
     
     # Modo Oculto/Silencioso
-    cstEnv = cst.interface.DesignEnvironment.new(['--hide', '--quiet']) 
-    cst.interface.DesignEnvironment.set_quiet_mode(cstEnv, True)
+    cstEnv = cst.interface.DesignEnvironment.new() 
+    #cst.interface.DesignEnvironment.set_quiet_mode(cstEnv, True)
     
     try:
         # CREAR PROYECTO NUEVO EN BLANCO
@@ -134,10 +134,10 @@ def evaluate(vars_algoritmo):
         ruta_macro_temporal  = r"C:\Users\jmate\Desktop\teleco\TFG\CST\Macro_To_Run.bas"
         
         # Generamos la macro con los pasos del Excel
-        generar_macro_cst(vars_algoritmo, ruta_plantilla_macro, ruta_macro_temporal)
+        #generar_macro_cst(vars_algoritmo, ruta_plantilla_macro, ruta_macro_temporal)
         
         # CST se abre oculto, simula, exporta los .txt y se cierra
-        # ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
+        ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
        
         # Cargar los datos de S11
         ruta_archivo_imag = r"C:\Users\jmate\Desktop\teleco\TFG\CST\ImagS11.txt"

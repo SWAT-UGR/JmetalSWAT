@@ -250,8 +250,8 @@ class LivePlotObserver(Observer):
     def __init__(self, frequency: int, max_evaluations: int, input_directory: str = "intermediate_results", output_directory: str = "Pareto_Plots"):
         """
         :param frequency: Number of evaluations between plot updates.
-        :param max_evaluations: Total expected evaluations (to trigger the final summary plot).
-        :param input_directory: Folder where the FUN files are located (must match the Saver directory).
+        :param max_evaluations: Total expected evaluations.
+        :param input_directory: Folder where the FUN files are located.
         :param output_directory: Folder where the PNG plots will be saved.
         """
         self.frequency = frequency
@@ -283,48 +283,54 @@ class LivePlotObserver(Observer):
                         for line in file:
                             values = line.strip().split()
                             if len(values) >= 2:
-                                x_values.append(float(values[0]))
-                                y_values.append(float(values[1]))
+                                val_x = float(values[0])
+                                val_y = float(values[1])
+                                
+                                # EL FILTRO SALVAVIDAS:
+                                # Ignoramos cualquier valor que sea un "castigo" (ej. mayor a 1000)
+                                # Un S11 real nunca será mayor que 0, y un Axial Ratio real rara vez pasa de 40-50.
+                                if val_x < 1000.0 and val_y < 1000.0:
+                                    x_values.append(val_x)
+                                    y_values.append(val_y)
                                 
                     if not x_values:
                         return
                     
+                    # 1. Guardamos los datos de esta generación en el historial
                     self.history.append({
                         "eval": evaluations,
                         "x": x_values,
                         "y": y_values
                     })
                  
+                    # 2. Dibujamos y guardamos la gráfica individual de esta generación
                     fig, ax = plt.subplots(figsize=(6, 4))
                     
                     ax.scatter(x_values, y_values, c='blue', alpha=0.6, label=f'Evaluación {evaluations}')
                     ax.set_title(f"Frente de Pareto: Evaluación {evaluations}")
                     
-                    # Le he puesto los nombres reales de tus objetivos para que quede de 10
                     ax.set_xlabel("S11 (dB) [Minimizar]")
                     ax.set_ylabel("Axial Ratio [Minimizar]")
                     ax.grid(True, linestyle='--', alpha=0.7)
                     ax.legend()
                     
-                    # Guardamos la gráfica en lugar de mostrarla
                     plot_filename = f"{self.output_directory}/front_{evaluations}.png"
                     plt.savefig(plot_filename, bbox_inches='tight', dpi=300)
                     plt.close(fig) 
                     
-                    print(f"--> Gráfica guardada: {plot_filename}")
+                    print(f"--> Gráfica individual guardada: {plot_filename}")
                     
-                    # Si llegamos al final, generamos el resumen
-                    if evaluations >= self.max_evaluations:
-                        self.plot_summary(problem_name)
+                    # 3. ¡NUEVO! Generamos la gráfica resumen acumulada en cada paso
+                    self.plot_summary(problem_name, evaluations)
                     
                 except Exception as e:
                     print(f"Error reading file {fun_filename}: {e}")
             else:
                 print(f"Warning: File {fun_filename} not found yet.")
         
-    def plot_summary(self, problem_name):
-        """Generates a combined plot showing the evolution of all stored fronts."""
-        print("--> Generando gráfica resumen de la optimización...")
+    def plot_summary(self, problem_name, current_eval):
+        """Generates a combined plot showing the evolution of all stored fronts up to current_eval."""
+        print(f"--> Generando gráfica resumen acumulada hasta la evaluación {current_eval}...")
         
         fig, ax = plt.subplots(figsize=(10, 7))
         
@@ -342,20 +348,19 @@ class LivePlotObserver(Observer):
                     s=25 
                 )
                 
-            ax.set_title(f"Evolución del Frente de Pareto: {problem_name}")
+            ax.set_title(f"Evolución del Frente de Pareto (Hasta Eval {current_eval}): {problem_name}")
             ax.set_xlabel("S11 (dB) [Minimizar]")
             ax.set_ylabel("Axial Ratio [Minimizar]")
             ax.grid(True, linestyle='--', alpha=0.7)
             
-            # Ponemos la leyenda fuera del gráfico para que no tape los puntos
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             
-            # Guardamos la gráfica resumen
-            summary_filename = f"{self.output_directory}/Summary_All_Fronts.png"
+            # ¡NUEVO! El nombre del archivo ahora incluye la evaluación actual para no sobreescribirse
+            summary_filename = f"{self.output_directory}/Summary_hasta_eval_{current_eval}.png"
             plt.savefig(summary_filename, bbox_inches='tight', dpi=300)
             plt.close(fig)
             
-            print(f"--> Gráfica resumen guardada con éxito en: {summary_filename}")
+            print(f"--> Gráfica resumen acumulada guardada en: {summary_filename}")
             
             
 class AntenaGraficasObserver(Observer):

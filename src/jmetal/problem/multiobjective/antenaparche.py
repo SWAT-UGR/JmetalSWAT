@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import os
+import multiprocessing
 import logging
 # Añadimos la ruta de CST solo si no está ya añadida
 ruta_cst = r"C:\Program Files\CST Studio Suite 2026\AMD64\python_cst_libraries"
@@ -182,21 +183,27 @@ class antenaparcheInteger(IntegerProblem):
             print(f"Error durante la simulación de CST: {e}")
             
         finally:
-            # CERRAR EL PROYECTO SIN GUARDAR Y CERRAR CST
-            # Como los resultados ya se han exportado a .txt por la macro, 
-            # cerramos el proyecto directamente para liberar toda la RAM.
-            cstProject = None 
-            cstEnv = None
+            # 1. Soltamos el proyecto actual
+            if 'cstProject' in locals():
+                cstProject = None 
             
-            # 2. Asesinamos los procesos de CST en Windows (0 segundos, es inmediato)
-            os.system("taskkill /F /IM CST_DESIGN_ENVIRONMENT.exe /T >nul 2>&1")
-            os.system("taskkill /F /IM cst.exe /T >nul 2>&1")
+            # 2. Cierre nativo y oficial de CST (la opción de antes)
+            if 'cstEnv' in locals() and cstEnv is not None:
+                cst.interface.DesignEnvironment.close(cstEnv)
             
-            # 3. Pausa de 2 segundos de cortesía para que Windows limpie la RAM
+            # 3. Pausa de cortesía para que Windows asimile el cierre nativo
             time.sleep(2)
             
-            print("CST cerrado. Memoria liberada.")
-            
+            print("CST cerrado correctamente. Memoria liberada.")
+    def _worker_cst(self, ruta_macro, queue):
+        """Esta función es el 'clon' que vive en la zona de cuarentena"""
+        try:
+            # Aquí llamas a tu función normal que abre CST y simula
+            resultados = self.ejecutar_cst_en_segundo_plano(ruta_macro)
+            queue.put(resultados)
+        except Exception as e:
+            print(f"Error en el worker: {e}")
+            queue.put(None)            
             
     def evaluate(self, solution: IntegerSolution) -> IntegerSolution:
         tiempo_inicio = time.time()
@@ -239,83 +246,108 @@ class antenaparcheInteger(IntegerProblem):
         self.generar_macro_cst(vars_fisicas, ruta_plantilla_macro, ruta_macro_temporal)
         
         # CST se abre oculto, simula, exporta los .txt y se cierra
-        self.ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
-       
-        # Cargar los datos de S11
-        ruta_archivo_imag = r"C:\Users\jmate\Desktop\teleco\TFG\CST\ImagS11.txt"
-        datos_imag = np.loadtxt(ruta_archivo_imag, skiprows=2)
+        #self.ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
+       # 1. Preparamos el canal de comunicación con el clon
+        queue = multiprocessing.Queue()
         
-        ruta_archivo_real = r"C:\Users\jmate\Desktop\teleco\TFG\CST\RealS11.txt"
-        datos_real = np.loadtxt(ruta_archivo_real, skiprows=2)
-        frecuencia = datos_imag[:, 0]
+        # 2. Lanzamos la simulación en un universo paralelo (Sandbox)
+        p = multiprocessing.Process(target=self._worker_cst, args=(ruta_macro_temporal, queue))
+        p.start()
         
-        # Extraer las columnas
-        s11_imag = datos_imag[:, 1]
-        s11_real = datos_real[:, 1]
+        # 3. EL CORTAFUEGOS: Esperamos un máximo de 600 segundos (10 minutos)
+        p.join(timeout=600) 
         
-        # Convertir a decibelios (dB)
-        
-        s11_complejo = s11_real + 1j * s11_imag
-        
-        s11_db = 20 * np.log10(np.abs(s11_complejo))
-        
-        rutas_farfield = [
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f4_8.txt",
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f4_9.txt",
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5.txt",
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5_1.txt",
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5_2.txt"
-        ]
-        
-        frecuencias_farfield = []
-        axial_ratios = []
-        
-        # Leer cada archivo y extraer la frecuencia de su nombre
-        for ruta in rutas_farfield:
-            # --- Extraer Frecuencia del nombre ---
-            nombre_archivo = os.path.basename(ruta)
-            # Quitamos el texto sobrante
-            texto_num = nombre_archivo.replace("Farfield_f", "").replace(".txt", "")
-            # Cambiamos "_" por "." y convertimos a número
-            frec_val = float(texto_num.replace("_", "."))
+        if p.is_alive():
+            print("¡TIMEOUT! La antena se ha atascado. Exterminando proceso...")
             
-            # --- Extraer el dato Axial Ratio ---
-            datos_ff = np.loadtxt(ruta, skiprows=2)
-            primer_ax_ratio = datos_ff[0, 7] # Fila 0, Columna 8 (índice 7)
+            # A) Matamos el clon de Python (corta la conexión COM de forma segura)
+            p.terminate()
+            p.join()
             
-            # Guardamos ambos valores
-            frecuencias_farfield.append(frec_val)
-            axial_ratios.append(primer_ax_ratio)
-        
-        # # Ordenar las listas por frecuencia de menor a mayor (por si las rutas estuvieran desordenadas)
-        # # zip empareja los datos, sorted los ordena guiándose por la frecuencia, y zip(*...) los vuelve a separar
-        # frecuencias_farfield, axial_ratios = zip(*sorted(zip(frecuencias_farfield, axial_ratios)))
-        
-        solution.objectives[0]= np.sum(s11_db)/len(s11_db)
-        solution.objectives[1] = np.sum(axial_ratios)/len(axial_ratios)
-        
-        solution.attributes['vars_fisicas'] = vars_fisicas
-        solution.attributes['frecuencia'] = frecuencia
-        solution.attributes['s11_imag'] = s11_imag
-        solution.attributes['s11_real'] = s11_real
-        solution.attributes['s11_db'] = s11_db
-        solution.attributes['frec_farfield'] = frecuencias_farfield
-        solution.attributes['axial_ratios'] = axial_ratios
-        
+            # B) Limpiamos los restos zombis de CST de la RAM
+            procesos_zombi = ["CST_DESIGN_ENVIRONMENT.exe", "cst.exe", "CST_MICROWAVE_STUDIO.exe", "CST_MWS.exe"]
+            for zombi in procesos_zombi:
+                os.system(f"taskkill /F /IM {zombi} /T >nul 2>&1")
+                
+            time.sleep(3) # Pausa de cortesía para Windows
+            
+            # C) EL CASTIGO DEFINITIVO (Lo hacemos altísimo para que muera en el torneo)
+            solution.objectives[0] = 10e8
+            solution.objectives[1] = 10e8
+            
+            # D) Rellenamos con basura segura para que no peten los Observers
+            solution.attributes['vars_fisicas'] = vars_fisicas
+            solution.attributes['frecuencia'] = np.array([0])
+            solution.attributes['s11_imag'] = np.array([0])
+            solution.attributes['s11_real'] = np.array([0])
+            solution.attributes['s11_db'] = np.array([0])
+            solution.attributes['frec_farfield'] = [0]
+            solution.attributes['axial_ratios'] = [0]
+            
+        else:
+            # SI TERMINÓ A TIEMPO, LEEMOS LOS ARCHIVOS
+            # (TODO ESTO VA INDENTADO DENTRO DEL ELSE)
+            
+            # Cargar los datos de S11
+            ruta_archivo_imag = r"C:\Users\jmate\Desktop\teleco\TFG\CST\ImagS11.txt"
+            datos_imag = np.loadtxt(ruta_archivo_imag, skiprows=2)
+            
+            ruta_archivo_real = r"C:\Users\jmate\Desktop\teleco\TFG\CST\RealS11.txt"
+            datos_real = np.loadtxt(ruta_archivo_real, skiprows=2)
+            
+            frecuencia = datos_imag[:, 0]
+            s11_imag = datos_imag[:, 1]
+            s11_real = datos_real[:, 1]
+            
+            # Convertir a decibelios (dB)
+            s11_complejo = s11_real + 1j * s11_imag
+            s11_db = 20 * np.log10(np.abs(s11_complejo))
+            
+            rutas_farfield = [
+                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f4_8.txt",
+                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f4_9.txt",
+                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5.txt",
+                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5_1.txt",
+                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5_2.txt"
+            ]
+            
+            frecuencias_farfield = []
+            axial_ratios = []
+            
+            for ruta in rutas_farfield:
+                nombre_archivo = os.path.basename(ruta)
+                texto_num = nombre_archivo.replace("Farfield_f", "").replace(".txt", "")
+                frec_val = float(texto_num.replace("_", "."))
+                
+                datos_ff = np.loadtxt(ruta, skiprows=2)
+                primer_ax_ratio = datos_ff[0, 7] 
+                
+                frecuencias_farfield.append(frec_val)
+                axial_ratios.append(primer_ax_ratio)
+            
+            # GUARDAMOS LOS OBJETIVOS REALES
+            solution.objectives[0] = np.sum(s11_db)/len(s11_db)
+            solution.objectives[1] = np.sum(axial_ratios)/len(axial_ratios)
+            
+            solution.attributes['vars_fisicas'] = vars_fisicas
+            solution.attributes['frecuencia'] = frecuencia
+            solution.attributes['s11_imag'] = s11_imag
+            solution.attributes['s11_real'] = s11_real
+            solution.attributes['s11_db'] = s11_db
+            solution.attributes['frec_farfield'] = frecuencias_farfield
+            solution.attributes['axial_ratios'] = axial_ratios
+            
+        # Fuera del if/else, calculamos y escribimos el tiempo final
         tiempo_fin = time.time()
         tiempo_total_segundos = tiempo_fin - tiempo_inicio
         tiempo_total_minutos = tiempo_total_segundos / 60.0
         
         archivo_nuevo = not os.path.exists(self.ruta_csv_tiempos)
-        
         with open(self.ruta_csv_tiempos, "a", encoding="utf-8") as f:
             if archivo_nuevo:
-                
                 f.write("Tiempo_Segundos;Tiempo_Minutos\n")
-            
             seg_str = f"{tiempo_total_segundos:.2f}".replace('.', ',')
             min_str = f"{tiempo_total_minutos:.2f}".replace('.', ',')
-            
             f.write(f"{seg_str};{min_str}\n")
             
     def __evaluate_constraints(self, vars_fisicas, solution: IntegerSolution) -> bool:
