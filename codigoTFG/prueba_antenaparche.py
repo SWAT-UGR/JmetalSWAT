@@ -43,8 +43,7 @@ if __name__ == "__main__":
     
     plotter_pareto = LivePlotObserver(
         frequency=100, 
-        max_evaluations=max_evaluations, 
-        input_directory=r"C:\Users\jmate\Desktop\teleco\TFG\intermediate_results_3800", 
+        max_evaluations=max_evaluations,  
         output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Pareto_Plots_3800"
     )
     algorithm.observable.register(observer=plotter_pareto)

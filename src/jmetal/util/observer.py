@@ -11,6 +11,7 @@ from jmetal.core.problem import DynamicProblem
 from jmetal.core.quality_indicator import InvertedGenerationalDistance
 from jmetal.lab.visualization import Plot, StreamingPlot
 from jmetal.util.solution import print_function_values_to_file, print_variables_to_file
+from jmetal.util.solution import get_non_dominated_solutions
 import matplotlib.pyplot as plt
 
 S = TypeVar("S")
@@ -247,16 +248,14 @@ class SaveResultsObserver(Observer):
             
 class LivePlotObserver(Observer):
     
-    def __init__(self, frequency: int, max_evaluations: int, input_directory: str = "intermediate_results", output_directory: str = "Pareto_Plots"):
+    def __init__(self, frequency: int, max_evaluations: int, output_directory: str = "Pareto_Plots"):
         """
         :param frequency: Number of evaluations between plot updates.
         :param max_evaluations: Total expected evaluations.
-        :param input_directory: Folder where the FUN files are located.
         :param output_directory: Folder where the PNG plots will be saved.
         """
         self.frequency = frequency
         self.max_evaluations = max_evaluations
-        self.input_directory = input_directory
         self.output_directory = output_directory
         self.history = []
         
@@ -268,66 +267,62 @@ class LivePlotObserver(Observer):
         evaluations = kwargs["EVALUATIONS"]
         problem = kwargs["PROBLEM"]
         
+        # 1. Cogemos las soluciones directamente de la RAM
+        solutions = kwargs.get("SOLUTIONS")
+        
+        if not solutions:
+            return
+
         if evaluations % self.frequency == 0:
             problem_name = problem.name()
             
-            # Construct the filename of the FUN file we want to load
-            fun_filename = f"{self.input_directory}/FUN.{problem_name}.{evaluations}"
+            # 2. Extraemos matemáticamente SOLO el Frente de Pareto
+            pareto_front = get_non_dominated_solutions(solutions)
             
             x_values = []
             y_values = []
             
-            if os.path.exists(fun_filename):
-                try:
-                    with open(fun_filename, 'r') as file:
-                        for line in file:
-                            values = line.strip().split()
-                            if len(values) >= 2:
-                                val_x = float(values[0])
-                                val_y = float(values[1])
-                                
-                                # EL FILTRO SALVAVIDAS:
-                                # Ignoramos cualquier valor que sea un "castigo" (ej. mayor a 1000)
-                                # Un S11 real nunca será mayor que 0, y un Axial Ratio real rara vez pasa de 40-50.
-                                if val_x < 1000.0 and val_y < 1000.0:
-                                    x_values.append(val_x)
-                                    y_values.append(val_y)
-                                
-                    if not x_values:
-                        return
+            # 3. Recorremos el Frente de Pareto y extraemos los objetivos
+            for sol in pareto_front:
+                val_x = sol.objectives[0]
+                val_y = sol.objectives[1]
+                
+                # EL FILTRO SALVAVIDAS: Ignoramos los valores de castigo
+                if val_x < 1000.0 and val_y < 1000.0:
+                    x_values.append(val_x)
+                    y_values.append(val_y)
                     
-                    # 1. Guardamos los datos de esta generación en el historial
-                    self.history.append({
-                        "eval": evaluations,
-                        "x": x_values,
-                        "y": y_values
-                    })
-                 
-                    # 2. Dibujamos y guardamos la gráfica individual de esta generación
-                    fig, ax = plt.subplots(figsize=(6, 4))
-                    
-                    ax.scatter(x_values, y_values, c='blue', alpha=0.6, label=f'Evaluación {evaluations}')
-                    ax.set_title(f"Frente de Pareto: Evaluación {evaluations}")
-                    
-                    ax.set_xlabel("S11 (dB) [Minimizar]")
-                    ax.set_ylabel("Axial Ratio [Minimizar]")
-                    ax.grid(True, linestyle='--', alpha=0.7)
-                    ax.legend()
-                    
-                    plot_filename = f"{self.output_directory}/front_{evaluations}.png"
-                    plt.savefig(plot_filename, bbox_inches='tight', dpi=300)
-                    plt.close(fig) 
-                    
-                    print(f"--> Gráfica individual guardada: {plot_filename}")
-                    
-                    # 3. ¡NUEVO! Generamos la gráfica resumen acumulada en cada paso
-                    self.plot_summary(problem_name, evaluations)
-                    
-                except Exception as e:
-                    print(f"Error reading file {fun_filename}: {e}")
-            else:
-                print(f"Warning: File {fun_filename} not found yet.")
+            if not x_values:
+                return
         
+            # 4. Guardamos los datos completos en el historial (LAS LISTAS)
+            self.history.append({
+                "eval": evaluations,
+                "x": x_values, 
+                "y": y_values
+            })
+            
+            # 5. Dibujamos y guardamos la gráfica individual de esta generación
+            fig, ax = plt.subplots(figsize=(6, 4))
+            
+            # Le pasamos LAS LISTAS para que dibuje todos los puntos
+            ax.scatter(x_values, y_values, c='red', alpha=0.8, edgecolors='black', label=f'Pareto Eval {evaluations}')
+             
+            ax.set_title(f"Frente de Pareto Real: Evaluación {evaluations}")
+            ax.set_xlabel("S11 (dB) [Minimizar]")
+            ax.set_ylabel("Axial Ratio [Minimizar]")
+            ax.grid(True, linestyle='--', alpha=0.7)
+            ax.legend()
+            
+            plot_filename = f"{self.output_directory}/front_{evaluations}.png"
+            plt.savefig(plot_filename, bbox_inches='tight', dpi=300)
+            plt.close(fig) 
+            
+            print(f"--> Gráfica del Frente de Pareto guardada: {plot_filename}")
+            
+            # 6. Generamos la gráfica resumen acumulada
+            self.plot_summary(problem_name, evaluations)
+            
     def plot_summary(self, problem_name, current_eval):
         """Generates a combined plot showing the evolution of all stored fronts up to current_eval."""
         print(f"--> Generando gráfica resumen acumulada hasta la evaluación {current_eval}...")
@@ -339,13 +334,19 @@ class LivePlotObserver(Observer):
             colors = plt.cm.viridis(np.linspace(0, 1, total_plots))
             
             for i, data in enumerate(self.history):
+                # Destacamos más visualmente las iteraciones más recientes
+                alpha_val = 0.4 if i < total_plots - 1 else 1.0
+                size_val = 20 if i < total_plots - 1 else 50
+                edge_color = 'black' if i == total_plots - 1 else 'none'
+                
                 ax.scatter(
                     data["x"], 
                     data["y"], 
                     label=f"Eval {data['eval']}", 
                     color=colors[i], 
-                    alpha=0.7,
-                    s=25 
+                    alpha=alpha_val,
+                    edgecolors=edge_color,
+                    s=size_val 
                 )
                 
             ax.set_title(f"Evolución del Frente de Pareto (Hasta Eval {current_eval}): {problem_name}")
@@ -355,7 +356,6 @@ class LivePlotObserver(Observer):
             
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             
-            # ¡NUEVO! El nombre del archivo ahora incluye la evaluación actual para no sobreescribirse
             summary_filename = f"{self.output_directory}/Summary_hasta_eval_{current_eval}.png"
             plt.savefig(summary_filename, bbox_inches='tight', dpi=300)
             plt.close(fig)
