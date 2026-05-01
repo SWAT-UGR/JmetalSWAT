@@ -1,0 +1,22 @@
+[DIRECTORIOS]
+# Rutas donde se guardarán los resultados y gráficas. 
+# Importante: No pongas comillas alrededor de las rutas.
+carpeta_resultados_vars = C:\Users\jmate\Desktop\teleco\TFG\Resultados\intermediate_results_3800
+carpeta_graficas_cst = C:\Users\jmate\Desktop\teleco\TFG\CST plots\Plots cst_3800
+carpeta_graficas_pareto = C:\Users\jmate\Desktop\teleco\TFG\Frentes pareto\Pareto_Plots_3800
+
+[WARM_START]
+# Pon 'True' si quieres cargar una población anterior, o 'False' para empezar de cero
+usar_rescate = True
+# Ruta del archivo VAR a cargar (solo se usa si usar_rescate = True)
+ruta_archivo_rescate = C:\Users\jmate\Desktop\teleco\TFG\Resultados\intermediate_results_3400\VAR.antenaparcheInteger.400
+
+[ALGORITMO]
+# Parámetros generales de la optimización
+max_evaluaciones = 5000
+tamaño_poblacion = 100
+tamaño_descendencia = 100
+
+[OBSERVERS]
+# Cada cuántas evaluaciones se actualizan las gráficas y se guardan los archivos
+frecuencia_guardado = 100

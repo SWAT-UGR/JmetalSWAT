@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Generic, List, TypeVar
 
 from jmetal.core.problem import Problem
-from jmetal.core.solution import Solution
+from jmetal.core.solution import Solution, FloatSolution, IntegerSolution, BinarySolution, CompositeSolution
 
 R = TypeVar("R")
 
@@ -47,6 +47,8 @@ class InjectorFromFile(InjectorGenerator):
     """
     Generador reutilizable que lee un archivo 
     y lo inyecta como población inicial.
+    Soporta problemas continuos, discretos, binarios y 
+    adaptaciones personalizadas con factores de escala (steps).
     """
     def __init__(self, ruta_archivo: str, problem):
         # Leer los datos numéricos del archivo
@@ -64,12 +66,40 @@ class InjectorFromFile(InjectorGenerator):
             
         for fila in datos_viejos:
             nueva_sol = problem.create_solution()
-            # Convertimos a enteros porque tu problema es Integer
-            nueva_sol.variables = [int(round(v / s)) for v, s in zip(fila, problem.steps)]
+            
+            # --- LÓGICA GENERALIZADA MULTI-TIPO ---
+            
+            # Caso 1: Problema personalizado con escalado físico (Tu TFG)
+            if hasattr(problem, 'steps') and problem.steps is not None:
+                nueva_sol.variables = [int(round(v / s)) for v, s in zip(fila, problem.steps)]
+                
+            # Caso 2: Problema de Enteros Estándar (Integer)
+            elif isinstance(nueva_sol, IntegerSolution):
+                nueva_sol.variables = [int(round(v)) for v in fila]
+                
+            # Caso 3: Problema Continuo Estándar (Float)
+            elif isinstance(nueva_sol, FloatSolution):
+                nueva_sol.variables = [float(v) for v in fila]
+                
+            # Caso 4: Problema Binario (Convierte 1.0 y 0.0 a True/False)
+            elif isinstance(nueva_sol, BinarySolution):
+                # jMetalPy guarda los genes binarios como booleanos o listas de bits
+                nueva_sol.variables = [bool(int(round(v))) for v in fila]
+                
+            # Caso 5: Problemas Compuestos (CompositeSolution)
+            elif isinstance(nueva_sol, CompositeSolution):
+                # Un Composite contiene soluciones anidadas. Reconstruirlo desde un txt 
+                # plano requiere conocer el esquema exacto de las sub-soluciones.
+                raise NotImplementedError("La inyección de un CompositeSolution desde un archivo plano requiere un mapeo estructural específico.")
+                
+            # Fallback de seguridad
+            else:
+                nueva_sol.variables = list(fila)
+            # ---------------------------------------
             
             soluciones_para_inyectar.append(nueva_sol)
             
         # Inicializar la clase padre (el inyector de JMetalPy) con la lista
         super().__init__(solutions=soluciones_para_inyectar)
         
-        print(f"--> [InjectorDesdeArchivo] {len(soluciones_para_inyectar)} antenas cargadas con éxito.")
+        print(f"--> [InjectorDesdeArchivo] {len(soluciones_para_inyectar)} soluciones cargadas con éxito.")

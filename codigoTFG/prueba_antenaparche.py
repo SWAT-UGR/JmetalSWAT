@@ -12,7 +12,7 @@ from jmetal.util.generator import InjectorFromFile
 if __name__ == "__main__":
     problem = antenaparcheInteger()
     
-    ruta_rescate = r"C:\Users\jmate\Desktop\teleco\TFG\intermediate_results_3400\VAR.antenaparcheInteger.400"
+    ruta_rescate = r"C:\Users\jmate\Desktop\teleco\TFG\Resultados\intermediate_results_3400\VAR.antenaparcheInteger.400"
     
     generador_rescate = InjectorFromFile(ruta_archivo=ruta_rescate, problem=problem)
     
@@ -32,19 +32,17 @@ if __name__ == "__main__":
     saver = GuardarResultadosFisicosObserver(
         frequency=100, 
         steps_del_problema=problem.steps, # Le pasamos los steps desde la clase del problema
-        output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\intermediate_results_3800"
+        output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Resultados\intermediate_results_3800"
     )
     algorithm.observable.register(observer=saver)
     
-    plotter_antena = AntenaGraficasObserver(frequency=100, output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Plots cst_3800")
+    plotter_antena = AntenaGraficasObserver(frequency=100, output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\CST plots\Plots cst_3800")
     algorithm.observable.register(observer=plotter_antena)
-    
-    ruta_pareto = r"C:\Users\jmate\Desktop\teleco\TFG\Pareto_Fronts_3800"
     
     plotter_pareto = LivePlotObserver(
         frequency=100, 
         max_evaluations=max_evaluations,  
-        output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Pareto_Plots_3800"
+        output_directory=r"C:\Users\jmate\Desktop\teleco\TFG\Frentes pareto\Pareto_Plots_3800"
     )
     algorithm.observable.register(observer=plotter_pareto)
                                   
