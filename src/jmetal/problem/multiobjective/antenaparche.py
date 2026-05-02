@@ -27,13 +27,27 @@ class antenaparcheInteger(IntegerProblem):
     """Problem antena.
     
     """
-    def __init__(self, number_of_variables: int = 22):
+    def __init__(self, rutas_config: dict, number_of_variables: int = 22):
         """:param number_of_variables: Number of decision variables of the problem."""
         
         super(antenaparcheInteger, self).__init__()
         
         self.obj_directions = [self.MINIMIZE, self.MINIMIZE]
         self.obj_labels = ["S11", "axial_ratios"]
+        
+        self.carpeta_cst = rutas_config['carpeta_cst']
+        self.ruta_plantilla_macro = rutas_config['ruta_plantilla_macro']
+        
+        # Generamos la ruta del CSV de tiempos dinámicamente
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.ruta_csv_tiempos = os.path.join(rutas_config['carpeta_tiempos'], f"estadisticas_tiempos_{timestamp}.csv")
+        
+        # Rutas dinámicas para los archivos que genera CST
+        self.ruta_macro_temporal = os.path.join(self.carpeta_cst, "Macro_To_Run.bas")
+        self.ruta_archivo_imag = os.path.join(self.carpeta_cst, "ImagS11.txt")
+        self.ruta_archivo_real = os.path.join(self.carpeta_cst, "RealS11.txt")
+        
+        
         self.steps = [0.1, 0.1, 1.0, 1.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 0.2, 0.2, 0.05, 0.05]
         
         lower_bound_real = [
@@ -239,14 +253,12 @@ class antenaparcheInteger(IntegerProblem):
             return solution 
         
         # Rutas de los archivos
-        ruta_plantilla_macro = r"C:\Users\jmate\Desktop\teleco\TFG\CST\MacroPatchCP_Multilayer_Cross.txt"
-        ruta_macro_temporal  = r"C:\Users\jmate\Desktop\teleco\TFG\CST\Macro_To_Run.bas"
+        ruta_plantilla_macro = self.ruta_plantilla_macro
+        ruta_macro_temporal  = self.ruta_macro_temporal
         
         # Generamos la macro con los pasos del Excel
         self.generar_macro_cst(vars_fisicas, ruta_plantilla_macro, ruta_macro_temporal)
         
-        # CST se abre oculto, simula, exporta los .txt y se cierra
-        #self.ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
        # 1. Preparamos el canal de comunicación con el clon
         queue = multiprocessing.Queue()
         
@@ -288,12 +300,9 @@ class antenaparcheInteger(IntegerProblem):
             # SI TERMINÓ A TIEMPO, LEEMOS LOS ARCHIVOS
             # (TODO ESTO VA INDENTADO DENTRO DEL ELSE)
             
-            # Cargar los datos de S11
-            ruta_archivo_imag = r"C:\Users\jmate\Desktop\teleco\TFG\CST\ImagS11.txt"
-            datos_imag = np.loadtxt(ruta_archivo_imag, skiprows=2)
-            
-            ruta_archivo_real = r"C:\Users\jmate\Desktop\teleco\TFG\CST\RealS11.txt"
-            datos_real = np.loadtxt(ruta_archivo_real, skiprows=2)
+            # Cargar los datos de S11 usando las variables dinámicas
+            datos_imag = np.loadtxt(self.ruta_archivo_imag, skiprows=2)
+            datos_real = np.loadtxt(self.ruta_archivo_real, skiprows=2)
             
             frecuencia = datos_imag[:, 0]
             s11_imag = datos_imag[:, 1]
@@ -303,13 +312,8 @@ class antenaparcheInteger(IntegerProblem):
             s11_complejo = s11_real + 1j * s11_imag
             s11_db = 20 * np.log10(np.abs(s11_complejo))
             
-            rutas_farfield = [
-                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f4_8.txt",
-                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f4_9.txt",
-                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5.txt",
-                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5_1.txt",
-                r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5_2.txt"
-            ]
+            frecuencias_evaluar = ["4_8", "4_9", "5", "5_1", "5_2"]
+            rutas_farfield = [os.path.join(self.carpeta_cst, f"Farfield_f{f}.txt") for f in frecuencias_evaluar]
             
             frecuencias_farfield = []
             axial_ratios = []

@@ -19,6 +19,12 @@ if __name__ == "__main__":
     
     # --- 1. EXTRACCIÓN DE PARÁMETROS DEL TXT ---
     
+    # Rutas de CST
+    rutas_cst = {
+        'carpeta_cst': config.get('DIRECTORIOS_CST', 'carpeta_cst'),
+        'ruta_plantilla_macro': config.get('DIRECTORIOS_CST', 'ruta_plantilla_macro'),
+        'carpeta_tiempos': config.get('DIRECTORIOS_CST', 'carpeta_tiempos')
+    }
     # Directorios
     dir_vars = config.get('DIRECTORIOS', 'carpeta_resultados_vars')
     dir_cst = config.get('DIRECTORIOS', 'carpeta_graficas_cst')
@@ -33,7 +39,7 @@ if __name__ == "__main__":
     frecuencia_obs = config.getint('OBSERVERS', 'frecuencia_guardado')
     
     # --- 2. CONFIGURACIÓN DEL PROBLEMA Y GENERADOR ---
-    problem = antenaparcheInteger()
+    problem = antenaparcheInteger(rutas_config=rutas_cst)
     
     # Lógica de rescate inteligente
     usar_rescate = config.getboolean('WARM_START', 'usar_rescate')

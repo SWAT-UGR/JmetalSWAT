@@ -1,15 +1,15 @@
 [DIRECTORIOS]
 # Rutas donde se guardarán los resultados y gráficas. 
 # Importante: No pongas comillas alrededor de las rutas.
-carpeta_resultados_vars = C:\Users\jmate\Desktop\teleco\TFG\Resultados\intermediate_results_3800
-carpeta_graficas_cst = C:\Users\jmate\Desktop\teleco\TFG\CST plots\Plots cst_3800
-carpeta_graficas_pareto = C:\Users\jmate\Desktop\teleco\TFG\Frentes pareto\Pareto_Plots_3800
+carpeta_resultados_vars = C:\Users\jmate\Desktop\teleco\TFG\Resultados\intermediate_results_4300
+carpeta_graficas_cst = C:\Users\jmate\Desktop\teleco\TFG\CST plots\Plots cst_4300
+carpeta_graficas_pareto = C:\Users\jmate\Desktop\teleco\TFG\Frentes pareto\Pareto_Plots_4300
 
 [WARM_START]
 # Pon 'True' si quieres cargar una población anterior, o 'False' para empezar de cero
 usar_rescate = True
 # Ruta del archivo VAR a cargar (solo se usa si usar_rescate = True)
-ruta_archivo_rescate = C:\Users\jmate\Desktop\teleco\TFG\Resultados\intermediate_results_3400\VAR.antenaparcheInteger.400
+ruta_archivo_rescate = C:\Users\jmate\Desktop\teleco\TFG\Resultados\intermediate_results_3800\VAR.antenaparcheInteger.500
 
 [ALGORITMO]
 # Parámetros generales de la optimización
@@ -20,3 +20,11 @@ tamaño_descendencia = 100
 [OBSERVERS]
 # Cada cuántas evaluaciones se actualizan las gráficas y se guardan los archivos
 frecuencia_guardado = 100
+
+[DIRECTORIOS_CST]
+# Carpeta principal donde CST guarda los archivos .txt de la simulación
+carpeta_cst = C:\Users\jmate\Desktop\teleco\TFG\CST
+# Ruta exacta de tu macro original (plantilla)
+ruta_plantilla_macro = C:\Users\jmate\Desktop\teleco\TFG\CST\MacroPatchCP_Multilayer_Cross.txt
+# Carpeta donde se guardarán los CSV con las estadísticas de tiempo
+carpeta_tiempos = C:\Users\jmate\Desktop\teleco\TFG\Tiempos_prueba
