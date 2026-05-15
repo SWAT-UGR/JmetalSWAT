@@ -103,8 +103,6 @@ class antenaparcheInteger(IntegerProblem):
         self.lower_bound = [int(round(val / step)) for val, step in zip(lower_bound_real, self.steps)]
         self.upper_bound = [int(round(val / step)) for val, step in zip(upper_bound_real, self.steps)]
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.ruta_csv_tiempos = rf"C:\Users\jmate\Desktop\teleco\TFG\Tiempos_prueba\estadisticas_tiempos_{timestamp}.csv"
         
     def number_of_objectives(self) -> int:
         return len(self.obj_directions)

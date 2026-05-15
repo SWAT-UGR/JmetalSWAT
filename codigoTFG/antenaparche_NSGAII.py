@@ -15,7 +15,7 @@ if __name__ == "__main__":
     print("--> Leyendo archivo de configuración...")
     config = configparser.ConfigParser()
     # Leemos el archivo txt (asegúrate de que esté en la misma carpeta)
-    config.read('conf.txt', encoding='utf-8')
+    config.read('conf_NSGAII.txt', encoding='utf-8')
     
     # --- 1. EXTRACCIÓN DE PARÁMETROS DEL TXT ---
     
@@ -57,7 +57,7 @@ if __name__ == "__main__":
         population_size=pop_size,
         population_generator=generador_inicial,
         offspring_population_size=offspring_size,
-        mutation=IntegerPolynomialMutation(probability=2.0 / problem.number_of_variables(), distribution_index=5),
+        mutation=IntegerPolynomialMutation(probability=3.0 / problem.number_of_variables(), distribution_index=5),
         crossover=IntegerSBXCrossover(probability=1.0, distribution_index=10),
         termination_criterion=StoppingByEvaluations(max_evaluations=max_evaluations),
     )
