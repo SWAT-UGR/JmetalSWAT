@@ -220,6 +220,13 @@ class antenaparcheInteger(IntegerProblem):
     def evaluate(self, solution: IntegerSolution) -> IntegerSolution:
         tiempo_inicio = time.time()
         
+        # 1. ESCUDO WARM-START: Comprobamos la etiqueta secreta
+        if solution.attributes.get('viene_de_warm_start', False):
+            # Le quitamos la etiqueta. Así, si esta solución se clona para 
+            # tener hijos en la siguiente generación, los hijos irán a CST.
+            solution.attributes['viene_de_warm_start'] = False
+            return solution
+        
         vars_fisicas = [var * step for var, step in zip(solution.variables, self.steps)]
         
         self.__evaluate_constraints(vars_fisicas, solution)
@@ -294,11 +301,54 @@ class antenaparcheInteger(IntegerProblem):
             solution.attributes['frec_farfield'] = [0]
             solution.attributes['axial_ratios'] = [0]
             
+        # else:
+        #     # SI TERMINÓ A TIEMPO, LEEMOS LOS ARCHIVOS
+        #     # (TODO ESTO VA INDENTADO DENTRO DEL ELSE)
+            
+        #     # Cargar los datos de S11 usando las variables dinámicas
+        #     datos_imag = np.loadtxt(self.ruta_archivo_imag, skiprows=2)
+        #     datos_real = np.loadtxt(self.ruta_archivo_real, skiprows=2)
+            
+        #     frecuencia = datos_imag[:, 0]
+        #     s11_imag = datos_imag[:, 1]
+        #     s11_real = datos_real[:, 1]
+            
+        #     # Convertir a decibelios (dB)
+        #     s11_complejo = s11_real + 1j * s11_imag
+        #     s11_db = 20 * np.log10(np.abs(s11_complejo))
+            
+        #     frecuencias_evaluar = ["4_8", "4_9", "5", "5_1", "5_2"]
+        #     rutas_farfield = [os.path.join(self.carpeta_cst, f"Farfield_f{f}.txt") for f in frecuencias_evaluar]
+            
+        #     frecuencias_farfield = []
+        #     axial_ratios = []
+            
+        #     for ruta in rutas_farfield:
+        #         nombre_archivo = os.path.basename(ruta)
+        #         texto_num = nombre_archivo.replace("Farfield_f", "").replace(".txt", "")
+        #         frec_val = float(texto_num.replace("_", "."))
+                
+        #         datos_ff = np.loadtxt(ruta, skiprows=2)
+        #         primer_ax_ratio = datos_ff[0, 7] 
+                
+        #         frecuencias_farfield.append(frec_val)
+        #         axial_ratios.append(primer_ax_ratio)
+            
+        #     # GUARDAMOS LOS OBJETIVOS REALES
+        #     solution.objectives[0] = np.sum(s11_db)/len(s11_db)
+        #     solution.objectives[1] = np.sum(axial_ratios)/len(axial_ratios)
+            
+        #     solution.attributes['vars_fisicas'] = vars_fisicas
+        #     solution.attributes['frecuencia'] = frecuencia
+        #     solution.attributes['s11_imag'] = s11_imag
+        #     solution.attributes['s11_real'] = s11_real
+        #     solution.attributes['s11_db'] = s11_db
+        #     solution.attributes['frec_farfield'] = frecuencias_farfield
+        #     solution.attributes['axial_ratios'] = axial_ratios
         else:
             # SI TERMINÓ A TIEMPO, LEEMOS LOS ARCHIVOS
-            # (TODO ESTO VA INDENTADO DENTRO DEL ELSE)
             
-            # Cargar los datos de S11 usando las variables dinámicas
+            # 1. Cargar los datos de S11
             datos_imag = np.loadtxt(self.ruta_archivo_imag, skiprows=2)
             datos_real = np.loadtxt(self.ruta_archivo_real, skiprows=2)
             
@@ -310,34 +360,31 @@ class antenaparcheInteger(IntegerProblem):
             s11_complejo = s11_real + 1j * s11_imag
             s11_db = 20 * np.log10(np.abs(s11_complejo))
             
-            frecuencias_evaluar = ["4_8", "4_9", "5", "5_1", "5_2"]
-            rutas_farfield = [os.path.join(self.carpeta_cst, f"Farfield_f{f}.txt") for f in frecuencias_evaluar]
+            # --- CORRECCIÓN OBJETIVO 1: S11 SOLO A 5 GHz ---
+            # Buscamos en qué índice del array está la frecuencia más cercana a 5.0
+            indice_5ghz = np.argmin(np.abs(frecuencia - 5.0))
+            s11_objetivo = s11_db[indice_5ghz] 
             
-            frecuencias_farfield = []
-            axial_ratios = []
+            # --- CORRECCIÓN OBJETIVO 2: AXIAL RATIO SOLO A 5 GHz ---
+            ruta_farfield_5 = os.path.join(self.carpeta_cst, "Farfield_f5.txt")
+            datos_ff = np.loadtxt(ruta_farfield_5, skiprows=2)
+            axial_ratio_objetivo = datos_ff[0, 7] 
             
-            for ruta in rutas_farfield:
-                nombre_archivo = os.path.basename(ruta)
-                texto_num = nombre_archivo.replace("Farfield_f", "").replace(".txt", "")
-                frec_val = float(texto_num.replace("_", "."))
-                
-                datos_ff = np.loadtxt(ruta, skiprows=2)
-                primer_ax_ratio = datos_ff[0, 7] 
-                
-                frecuencias_farfield.append(frec_val)
-                axial_ratios.append(primer_ax_ratio)
+            # GUARDAMOS LOS OBJETIVOS REALES (Monofrecuencia)
+            solution.objectives[0] = s11_objetivo
+            solution.objectives[1] = axial_ratio_objetivo
             
-            # GUARDAMOS LOS OBJETIVOS REALES
-            solution.objectives[0] = np.sum(s11_db)/len(s11_db)
-            solution.objectives[1] = np.sum(axial_ratios)/len(axial_ratios)
-            
+            # Guardamos los atributos para el Observer (las gráficas)
             solution.attributes['vars_fisicas'] = vars_fisicas
             solution.attributes['frecuencia'] = frecuencia
             solution.attributes['s11_imag'] = s11_imag
             solution.attributes['s11_real'] = s11_real
             solution.attributes['s11_db'] = s11_db
-            solution.attributes['frec_farfield'] = frecuencias_farfield
-            solution.attributes['axial_ratios'] = axial_ratios
+            
+            # Para mantener la compatibilidad con tus Observers que esperan listas
+            solution.attributes['frec_farfield'] = [5.0]
+            solution.attributes['axial_ratios'] = [axial_ratio_objetivo]
+            
             
         # Fuera del if/else, calculamos y escribimos el tiempo final
         tiempo_fin = time.time()

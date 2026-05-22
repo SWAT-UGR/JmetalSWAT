@@ -45,26 +45,35 @@ class InjectorGenerator(Generator):
 
 class InjectorFromFile(InjectorGenerator):
     """
-    Generador reutilizable que lee un archivo 
-    y lo inyecta como población inicial.
+    Generador reutilizable que lee archivos históricos (VAR y FUN) 
+    y los inyecta como población inicial ya evaluada.
     Soporta problemas continuos, discretos, binarios y 
     adaptaciones personalizadas con factores de escala (steps).
     """
-    def __init__(self, ruta_archivo: str, problem):
-        # Leer los datos numéricos del archivo
+    def __init__(self, ruta_var: str, problem, ruta_fun: str = None):
+        # 1. Leer los datos numéricos de los genotipos (VAR)
         try:
-            datos_viejos = np.loadtxt(ruta_archivo)
+            datos_var = np.loadtxt(ruta_var)
         except Exception as e:
-            raise FileNotFoundError(f"Error al leer el archivo {ruta_archivo}: {e}")
+            raise FileNotFoundError(f"Error al leer el archivo VAR {ruta_var}: {e}")
+            
+        # 2. Leer los fenotipos (FUN) si se proporciona el archivo
+        datos_fun = None
+        if ruta_fun:
+            try:
+                datos_fun = np.loadtxt(ruta_fun)
+            except Exception as e:
+                print(f"Advertencia: No se encontró el archivo FUN {ruta_fun}. Se forzará la re-evaluación en CST.")
         
-        # Fabricar la lista de soluciones
         soluciones_para_inyectar = []
         
         # Manejo por si el archivo solo tiene 1 línea (1 solución)
-        if datos_viejos.ndim == 1:
-            datos_viejos = datos_viejos.reshape(1, -1)
+        if datos_var.ndim == 1:
+            datos_var = datos_var.reshape(1, -1)
+        if datos_fun is not None and datos_fun.ndim == 1:
+            datos_fun = datos_fun.reshape(1, -1)
             
-        for fila in datos_viejos:
+        for i, fila in enumerate(datos_var):
             nueva_sol = problem.create_solution()
             
             # --- LÓGICA GENERALIZADA MULTI-TIPO ---
@@ -81,15 +90,12 @@ class InjectorFromFile(InjectorGenerator):
             elif isinstance(nueva_sol, FloatSolution):
                 nueva_sol.variables = [float(v) for v in fila]
                 
-            # Caso 4: Problema Binario (Convierte 1.0 y 0.0 a True/False)
+            # Caso 4: Problema Binario
             elif isinstance(nueva_sol, BinarySolution):
-                # jMetalPy guarda los genes binarios como booleanos o listas de bits
                 nueva_sol.variables = [bool(int(round(v))) for v in fila]
                 
             # Caso 5: Problemas Compuestos (CompositeSolution)
             elif isinstance(nueva_sol, CompositeSolution):
-                # Un Composite contiene soluciones anidadas. Reconstruirlo desde un txt 
-                # plano requiere conocer el esquema exacto de las sub-soluciones.
                 raise NotImplementedError("La inyección de un CompositeSolution desde un archivo plano requiere un mapeo estructural específico.")
                 
             # Fallback de seguridad
@@ -97,9 +103,14 @@ class InjectorFromFile(InjectorGenerator):
                 nueva_sol.variables = list(fila)
             # ---------------------------------------
             
+            # --- INYECCIÓN DEL FITNESS (LA MAGIA DEL WARM-START) ---
+            if datos_fun is not None:
+                # Inyectamos los objetivos históricos. Así jMetalPy sabrá que ya están evaluadas.
+                nueva_sol.objectives = list(datos_fun[i])
+                
             soluciones_para_inyectar.append(nueva_sol)
             
-        # Inicializar la clase padre (el inyector de JMetalPy) con la lista
+        # Inicializar la clase padre con la lista definitiva
         super().__init__(solutions=soluciones_para_inyectar)
         
-        print(f"--> [InjectorDesdeArchivo] {len(soluciones_para_inyectar)} soluciones cargadas con éxito.")
+        print(f"--> [InjectorFromFile] {len(soluciones_para_inyectar)} soluciones cargadas e inyectadas con éxito.")

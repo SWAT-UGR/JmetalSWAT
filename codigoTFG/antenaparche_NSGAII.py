@@ -35,6 +35,14 @@ if __name__ == "__main__":
     pop_size = config.getint('ALGORITMO', 'tamaño_poblacion')
     offspring_size = config.getint('ALGORITMO', 'tamaño_descendencia')
     
+    # Operadores
+    factor_mut = config.getfloat('OPERADORES', 'factor_prob_mutacion')
+    dist_index_mut = config.getfloat('OPERADORES', 'dist_index_mutacion')
+    
+    # ---> NUEVO: Operadores de Cruce <---
+    prob_cross = config.getfloat('OPERADORES', 'prob_cruce')
+    dist_index_cross = config.getfloat('OPERADORES', 'dist_index_cruce')
+    
     # Observers
     frecuencia_obs = config.getint('OBSERVERS', 'frecuencia_guardado')
     
@@ -57,8 +65,14 @@ if __name__ == "__main__":
         population_size=pop_size,
         population_generator=generador_inicial,
         offspring_population_size=offspring_size,
-        mutation=IntegerPolynomialMutation(probability=3.0 / problem.number_of_variables(), distribution_index=5),
-        crossover=IntegerSBXCrossover(probability=1.0, distribution_index=10),
+        mutation=IntegerPolynomialMutation(
+            probability=factor_mut / problem.number_of_variables(), 
+            distribution_index=dist_index_mut
+        ),
+        crossover=IntegerSBXCrossover(
+            probability=prob_cross, 
+            distribution_index=dist_index_cross
+        ),
         termination_criterion=StoppingByEvaluations(max_evaluations=max_evaluations),
     )
     
@@ -67,6 +81,7 @@ if __name__ == "__main__":
     
     saver = GuardarResultadosFisicosObserver(
         frequency=frecuencia_obs, 
+        algorithm=algorithm,
         steps_del_problema=problem.steps,
         output_directory=dir_vars
     )
@@ -78,7 +93,9 @@ if __name__ == "__main__":
     plotter_pareto = LivePlotObserver(
         frequency=frecuencia_obs, 
         max_evaluations=max_evaluations,  
-        output_directory=dir_pareto
+        output_directory=dir_pareto,
+        objective_labels=["S11 (dB) [Minimizar]", "Axial Ratio (dB) [Minimizar]"],
+        penalty_threshold=1000.0
     )
     algorithm.observable.register(observer=plotter_pareto)
                         

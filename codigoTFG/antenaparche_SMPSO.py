@@ -15,7 +15,7 @@ if __name__ == "__main__":
     print("--> Leyendo archivo de configuración...")
     config = configparser.ConfigParser()
     # Leemos el archivo txt (asegúrate de que esté en la misma carpeta)
-    config.read('conf_SMPSO.txt', encoding='utf-8')
+    config.read('conf_SMPSO_monofreq.txt', encoding='utf-8')
     
     # --- 1. EXTRACCIÓN DE PARÁMETROS DEL TXT ---
     
@@ -33,6 +33,11 @@ if __name__ == "__main__":
     # Algoritmo
     max_evaluations = config.getint('ALGORITMO', 'max_evaluaciones')
     swrm_size = config.getint('ALGORITMO', 'tamaño_enjambre')
+    capacidad_arch = config.getint('ALGORITMO', 'capacidad_archivo')
+
+    # Operadores
+    factor_mut = config.getfloat('OPERADORES', 'factor_prob_mutacion')
+    dist_index_mut = config.getfloat('OPERADORES', 'dist_index_mutacion')
     
     # Observers
     frecuencia_obs = config.getint('OBSERVERS', 'frecuencia_guardado')
@@ -43,9 +48,10 @@ if __name__ == "__main__":
     # Lógica de rescate inteligente
     usar_rescate = config.getboolean('WARM_START', 'usar_rescate')
     if usar_rescate:
-        ruta_rescate = config.get('WARM_START', 'ruta_archivo_rescate')
-        print(f"--> Modo Warm-Start ACTIVADO. Cargando desde: {ruta_rescate}")
-        generador_inicial = InjectorFromFile(ruta_archivo=ruta_rescate, problem=problem)
+        ruta_rescate_VAR = config.get('WARM_START', 'ruta_archivo_VAR')
+        ruta_rescate_FUN = config.get('WARM_START', 'ruta_archivo_FUN')
+        print(f"--> Modo Warm-Start ACTIVADO. Cargando desde: {ruta_rescate_VAR}")
+        generador_inicial = InjectorFromFile(ruta_var=ruta_rescate_VAR,ruta_fun=ruta_rescate_FUN , problem=problem)
     else:
         print("--> Modo Warm-Start DESACTIVADO. Generando población aleatoria.")
         generador_inicial = RandomGenerator()
@@ -53,8 +59,11 @@ if __name__ == "__main__":
     algorithm = SMPSO(
         problem=problem,
         swarm_size=swrm_size,
-        mutation=IntegerPolynomialMutation(probability=3.0 / problem.number_of_variables(), distribution_index=5),
-        leaders=CrowdingDistanceArchive(100),
+        mutation=IntegerPolynomialMutation(
+            probability=factor_mut / problem.number_of_variables(), 
+            distribution_index=dist_index_mut
+        ),        
+        leaders=CrowdingDistanceArchive(capacidad_arch),
         termination_criterion=StoppingByEvaluations(max_evaluations=max_evaluations),
     )
     
@@ -63,6 +72,7 @@ if __name__ == "__main__":
     
     saver = GuardarResultadosFisicosObserver(
         frequency=frecuencia_obs, 
+        algorithm=algorithm,
         steps_del_problema=problem.steps,
         output_directory=dir_vars
     )
@@ -74,7 +84,9 @@ if __name__ == "__main__":
     plotter_pareto = LivePlotObserver(
         frequency=frecuencia_obs, 
         max_evaluations=max_evaluations,  
-        output_directory=dir_pareto
+        output_directory=dir_pareto,
+        objective_labels=["S11 (dB) [Minimizar]", "Axial Ratio (dB) [Minimizar]"],
+        penalty_threshold=1000.0
     )
     algorithm.observable.register(observer=plotter_pareto)
                         

@@ -214,52 +214,76 @@ class VisualizerObserver(Observer):
 
 class SaveResultsObserver(Observer):
     
-    def __init__(self, frequency: int, output_directory: str = "intermediate_results"):
+    def __init__(self, frequency: int, algorithm, output_directory: str = "intermediate_results"):
         """
-        :param frequency: Number of evaluations between saves.
-        :param output_directory: Folder where the files will be saved.
+        Observador encargado de exportar periódicamente las variables y objetivos a disco.
+
+        :param frequency: Número de evaluaciones entre cada guardado.
+        :param algorithm: Instancia del algoritmo en ejecución (para extraer líderes históricos).
+        :param output_directory: Directorio destino para los archivos generados.
         """
         self.frequency = frequency
+        self.algorithm = algorithm
         self.output_directory = output_directory
         
-        # Create the directory if it does not exist
+        # Crear el directorio de salida si no existe
         if not os.path.isdir(self.output_directory):
             os.makedirs(self.output_directory, exist_ok=True)
 
     def update(self, *args, **kwargs):
-        # Retrieve the current evaluation count and solution list
+        # Extraer la información empaquetada en las notificaciones del algoritmo
         evaluations = kwargs["EVALUATIONS"]
         solutions = kwargs["SOLUTIONS"]
         problem = kwargs["PROBLEM"]
         
-        # Check if the current evaluation count is a multiple of the frequency
+        # Comprobar si corresponde guardar los datos según la frecuencia establecida
         if evaluations % self.frequency == 0:
             problem_name = problem.name()
             
-            print(f"--> Saving intermediate results for {problem_name} at evaluation {evaluations}...")
+            print(f"--> Guardando resultados intermedios para {problem_name} en la evaluación {evaluations}...")
             
-            # Create filenames including problem name and evaluation number
+            # Hacemos una copia superficial de las soluciones para no alterar la RAM del algoritmo
+            solutions_to_save = solutions.copy()
+            
+            # ESTRATEGIA ANTI-AMNESIA (Soporte dinámico SMPSO / NSGA-II)
+            # Si el algoritmo posee un archivo externo de líderes (ej. SMPSO), no podemos perderlos.
+            if hasattr(self.algorithm, 'leaders'):
+                leaders = self.algorithm.leaders.solution_list
+                # Sobrescribimos las primeras posiciones del enjambre con los líderes históricos.
+                # Así el Warm-Start arranca exactamente desde el Frente de Pareto real, 
+                # manteniendo el resto de partículas del enjambre para no perder diversidad.
+                for i in range(min(len(leaders), len(solutions_to_save))):
+                    solutions_to_save[i] = leaders[i]
+            
+            # 3. Generar las rutas de archivo indexadas por nombre y evaluación
             fun_filename = f"{self.output_directory}/FUN.{problem_name}.{evaluations}"
             var_filename = f"{self.output_directory}/VAR.{problem_name}.{evaluations}"
             
-            # Save the files
-            print_function_values_to_file(solutions, fun_filename)
-            print_variables_to_file(solutions, var_filename)
+            # Volcar los datos matriciales al disco usando la lista corregida
+            print_function_values_to_file(solutions_to_save, fun_filename)
+            print_variables_to_file(solutions_to_save, var_filename)
             
 class LivePlotObserver(Observer):
     
-    def __init__(self, frequency: int, max_evaluations: int, output_directory: str = "Pareto_Plots"):
+    def __init__(self, frequency: int, max_evaluations: int, output_directory: str = "Pareto_Plots", 
+                 objective_labels: list = ["Objetivo 1", "Objetivo 2"], penalty_threshold: float = 1000.0):
         """
-        :param frequency: Number of evaluations between plot updates.
-        :param max_evaluations: Total expected evaluations.
-        :param output_directory: Folder where the PNG plots will be saved.
+        Observador para la renderización dinámica y guardado del frente de Pareto bidimensional.
+
+        :param frequency: Número de evaluaciones entre cada actualización gráfica.
+        :param max_evaluations: Número máximo de evaluaciones esperadas (para escalado/historial).
+        :param output_directory: Directorio destino para guardar las imágenes PNG.
+        :param objective_labels: Lista con los nombres de los ejes X e Y para la gráfica.
+        :param penalty_threshold: Umbral máximo para filtrar soluciones con penalizaciones (ej. CST timeout).
         """
         self.frequency = frequency
         self.max_evaluations = max_evaluations
         self.output_directory = output_directory
+        self.objective_labels = objective_labels
+        self.penalty_threshold = penalty_threshold
         self.history = []
         
-        # Crear la carpeta para las gráficas si no existe
+        # Crear el directorio para las gráficas si no existe
         if not os.path.exists(self.output_directory):
             os.makedirs(self.output_directory, exist_ok=True)
 
@@ -267,7 +291,7 @@ class LivePlotObserver(Observer):
         evaluations = kwargs["EVALUATIONS"]
         problem = kwargs["PROBLEM"]
         
-        # 1. Cogemos las soluciones directamente de la RAM
+        # Extraer las soluciones directamente de la memoria RAM
         solutions = kwargs.get("SOLUTIONS")
         
         if not solutions:
@@ -276,41 +300,41 @@ class LivePlotObserver(Observer):
         if evaluations % self.frequency == 0:
             problem_name = problem.name()
             
-            # 2. Extraemos matemáticamente SOLO el Frente de Pareto
+            # Extraer matemáticamente SOLO el conjunto de soluciones no dominadas (Frente de Pareto)
             pareto_front = get_non_dominated_solutions(solutions)
             
             x_values = []
             y_values = []
             
-            # 3. Recorremos el Frente de Pareto y extraemos los objetivos
+            # Recorrer el frente de Pareto y aislar los objetivos
             for sol in pareto_front:
                 val_x = sol.objectives[0]
                 val_y = sol.objectives[1]
                 
-                # EL FILTRO SALVAVIDAS: Ignoramos los valores de castigo
-                if val_x < 1000.0 and val_y < 1000.0:
+                # Filtro de viabilidad: descartar valores atípicos o penalizaciones del simulador
+                if val_x < self.penalty_threshold and val_y < self.penalty_threshold:
                     x_values.append(val_x)
                     y_values.append(val_y)
                     
             if not x_values:
                 return
         
-            # 4. Guardamos los datos completos en el historial (LAS LISTAS)
+            # Almacenar los datos filtrados en el historial para la gráfica acumulada
             self.history.append({
                 "eval": evaluations,
                 "x": x_values, 
                 "y": y_values
             })
             
-            # 5. Dibujamos y guardamos la gráfica individual de esta generación
+            # Generar y guardar la gráfica individual de la generación actual
             fig, ax = plt.subplots(figsize=(6, 4))
             
-            # Le pasamos LAS LISTAS para que dibuje todos los puntos
+            # Renderizar el gráfico de dispersión con el frente actual
             ax.scatter(x_values, y_values, c='red', alpha=0.8, edgecolors='black', label=f'Pareto Eval {evaluations}')
              
             ax.set_title(f"Frente de Pareto Real: Evaluación {evaluations}")
-            ax.set_xlabel("S11 (dB) [Minimizar]")
-            ax.set_ylabel("Axial Ratio [Minimizar]")
+            ax.set_xlabel(self.objective_labels[0])
+            ax.set_ylabel(self.objective_labels[1])
             ax.grid(True, linestyle='--', alpha=0.7)
             ax.legend()
             
@@ -320,11 +344,11 @@ class LivePlotObserver(Observer):
             
             print(f"--> Gráfica del Frente de Pareto guardada: {plot_filename}")
             
-            # 6. Generamos la gráfica resumen acumulada
+            # Invocar la generación de la gráfica resumen acumulada
             self.plot_summary(problem_name, evaluations)
             
     def plot_summary(self, problem_name, current_eval):
-        """Generates a combined plot showing the evolution of all stored fronts up to current_eval."""
+        """Genera un gráfico combinado mostrando la evolución de todos los frentes almacenados."""
         print(f"--> Generando gráfica resumen acumulada hasta la evaluación {current_eval}...")
         
         fig, ax = plt.subplots(figsize=(10, 7))
@@ -334,7 +358,7 @@ class LivePlotObserver(Observer):
             colors = plt.cm.viridis(np.linspace(0, 1, total_plots))
             
             for i, data in enumerate(self.history):
-                # Destacamos más visualmente las iteraciones más recientes
+                # Destacar visualmente las iteraciones más recientes (mayor opacidad y tamaño)
                 alpha_val = 0.4 if i < total_plots - 1 else 1.0
                 size_val = 20 if i < total_plots - 1 else 50
                 edge_color = 'black' if i == total_plots - 1 else 'none'
@@ -350,8 +374,8 @@ class LivePlotObserver(Observer):
                 )
                 
             ax.set_title(f"Evolución del Frente de Pareto (Hasta Eval {current_eval}): {problem_name}")
-            ax.set_xlabel("S11 (dB) [Minimizar]")
-            ax.set_ylabel("Axial Ratio [Minimizar]")
+            ax.set_xlabel(self.objective_labels[0])
+            ax.set_ylabel(self.objective_labels[1])
             ax.grid(True, linestyle='--', alpha=0.7)
             
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -432,12 +456,19 @@ class AntenaGraficasObserver(Observer):
             plt.close()
             
 class GuardarResultadosFisicosObserver(Observer):
-    def __init__(self, frequency: int, steps_del_problema: list, output_directory: str = "intermediate_results"):
+    
+    def __init__(self, frequency: int, algorithm, steps_del_problema: list, output_directory: str = "intermediate_results"):
         """
-        Guarda los archivos FUN y VAR, pero traduciendo los enteros a 
-        las dimensiones físicas reales usando los steps del problema.
+        Guarda los archivos FUN y VAR, traduciendo los enteros a las dimensiones 
+        físicas reales e inyectando los líderes históricos si el algoritmo tiene memoria (SMPSO).
+        
+        :param frequency: Número de evaluaciones entre cada guardado.
+        :param algorithm: Instancia del algoritmo en ejecución (para extraer líderes históricos).
+        :param steps_del_problema: Factores de escala multiplicativos para el mapeo geométrico.
+        :param output_directory: Directorio destino para los archivos generados.
         """
         self.frequency = frequency
+        self.algorithm = algorithm  
         self.steps = steps_del_problema
         self.output_directory = output_directory
         
@@ -453,18 +484,29 @@ class GuardarResultadosFisicosObserver(Observer):
             problem_name = problem.name()
             print(f"--> [Observer] Guardando resultados físicos para {problem_name} en evaluación {evaluations}...")
             
+            # Crear una copia de la población actual para proteger el flujo de ejecución principal
+            solutions_to_save = solutions.copy()
+            
+            # Estrategia anti-amnesia para SMPSO
+            # Si el algoritmo opera con un archivo externo de líderes, los incrustamos 
+            # en las primeras posiciones para que no se pierda el frente histórico en el reinicio.
+            if hasattr(self.algorithm, 'leaders'):
+                leaders = self.algorithm.leaders.solution_list
+                for i in range(min(len(leaders), len(solutions_to_save))):
+                    solutions_to_save[i] = leaders[i]
+            
+            # Guardar el archivo de funciones objetivo (FUN) con el frente corregido
             fun_filename = f"{self.output_directory}/FUN.{problem_name}.{evaluations}"
-            print_function_values_to_file(solutions, fun_filename)
+            print_function_values_to_file(solutions_to_save, fun_filename)
 
-            # Guardar archivo VAR con las medidas FÍSICAS
+            # Guardar el archivo de variables (VAR) traduciendo a medidas FÍSICAS reales
             var_filename = f"{self.output_directory}/VAR.{problem_name}.{evaluations}"
             
             with open(var_filename, "w") as f:
-                for s in solutions: # Recorremos la población antena por antena
-                    # Traducimos de entero a físico para esta antena concreta
+                for s in solutions_to_save:  # Recorremos la lista corregida (sincronizada con FUN)
+                    # Traducimos de entero a dimensión física real (mm) para cada variable
                     vars_fisicas = [var * step for var, step in zip(s.variables, self.steps)]
                     
-                    # Lo convertimos a texto con 3 decimales, separado por tabulaciones, y escribimos
+                    # Convertimos a texto con 3 decimales, separado por tabulaciones, y escribimos en disco
                     linea = "\t".join([f"{v:.3f}" for v in vars_fisicas])
                     f.write(linea + "\n")
-                

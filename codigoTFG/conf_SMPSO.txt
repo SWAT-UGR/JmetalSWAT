@@ -15,7 +15,16 @@ ruta_archivo_rescate = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resulta
 # Parámetros generales de la optimización
 max_evaluaciones = 10000
 tamaño_enjambre = 100
+capacidad_archivo = 100
 
+[OPERADORES]
+# Factor del numerador para la probabilidad de mutación (prob = factor / numero_variables)
+# Ejemplo: 3.0 significa que mutarán de media 3 variables por individuo.
+factor_prob_mutacion = 3.0
+
+# Índice de distribución para la mutación polinómica
+# (Valores bajos como 5.0 = mayor dispersión/agresividad. Valores altos como 20.0 = mutación fina)
+dist_index_mutacion = 5.0
 
 [OBSERVERS]
 # Cada cuántas evaluaciones se actualizan las gráficas y se guardan los archivos

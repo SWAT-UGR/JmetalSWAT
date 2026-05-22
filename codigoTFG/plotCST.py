@@ -115,14 +115,14 @@ def ejecutar_cst_en_segundo_plano(ruta_macro):
     except Exception as e:
         print(f"Error durante la simulación de CST: {e}")
         
-    finally:
-        # CERRAR EL PROYECTO SIN GUARDAR Y CERRAR CST
-        # Como los resultados ya se han exportado a .txt por la macro, 
-        # cerramos el proyecto directamente para liberar toda la RAM.
-        if 'cstProject' in locals():
-            cstProject.close()
-        cst.interface.DesignEnvironment.close(cstEnv)
-        print("CST cerrado. Memoria liberada.")
+    # finally:
+    #     # CERRAR EL PROYECTO SIN GUARDAR Y CERRAR CST
+    #     # Como los resultados ya se han exportado a .txt por la macro, 
+    #     # cerramos el proyecto directamente para liberar toda la RAM.
+    #     if 'cstProject' in locals():
+    #         cstProject.close()
+    #     cst.interface.DesignEnvironment.close(cstEnv)
+    #     print("CST cerrado. Memoria liberada.")
 
 #def evaluate(self, solution: FloatSolution) -> FloatSolution:
 def evaluate(vars_algoritmo):
@@ -131,7 +131,7 @@ def evaluate(vars_algoritmo):
         
         # Rutas de los archivos
         ruta_plantilla_macro = r"C:\Users\jmate\Desktop\teleco\TFG\CST\MacroPatchCP_Multilayer_Cross.txt"
-        ruta_macro_temporal  = r"C:\Users\jmate\Desktop\teleco\TFG\CST\Macro_To_Run.bas"
+        ruta_macro_temporal  = r"C:\Users\jmate\Desktop\teleco\TFG\CST\Macro_To_Run - copia.bas"
         
         # Generamos la macro con los pasos del Excel
         #generar_macro_cst(vars_algoritmo, ruta_plantilla_macro, ruta_macro_temporal)
@@ -140,10 +140,10 @@ def evaluate(vars_algoritmo):
         ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
        
         # Cargar los datos de S11
-        ruta_archivo_imag = r"C:\Users\jmate\Desktop\teleco\TFG\CST\ImagS11.txt"
+        ruta_archivo_imag = r"C:\Users\jmate\Desktop\teleco\TFG\ImagS11.txt"
         datos_imag = np.loadtxt(ruta_archivo_imag, skiprows=2)
         
-        ruta_archivo_real = r"C:\Users\jmate\Desktop\teleco\TFG\CST\RealS11.txt"
+        ruta_archivo_real = r"C:\Users\jmate\Desktop\teleco\TFG\RealS11.txt"
         datos_real = np.loadtxt(ruta_archivo_real, skiprows=2)
         
         # Extraer las columnas
@@ -182,11 +182,11 @@ def evaluate(vars_algoritmo):
         plt.grid(True)
         
         rutas_farfield = [
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f4_8.txt",
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f4_9.txt",
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5.txt",
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5_1.txt",
-            r"C:\Users\jmate\Desktop\teleco\TFG\CST\Farfield_f5_2.txt"
+            r"C:\Users\jmate\Desktop\teleco\TFG\Farfield_f4_8.txt",
+            r"C:\Users\jmate\Desktop\teleco\TFG\Farfield_f4_9.txt",
+            r"C:\Users\jmate\Desktop\teleco\TFG\Farfield_f5.txt",
+            r"C:\Users\jmate\Desktop\teleco\TFG\Farfield_f5_1.txt",
+            r"C:\Users\jmate\Desktop\teleco\TFG\Farfield_f5_2.txt"
         ]
         
         frecuencias_farfield = []
