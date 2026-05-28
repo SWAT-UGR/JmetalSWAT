@@ -263,7 +263,7 @@ class SaveResultsObserver(Observer):
             print_function_values_to_file(solutions_to_save, fun_filename)
             print_variables_to_file(solutions_to_save, var_filename)
             
-class LivePlotObserver(Observer):
+class LivePlotObserver:
     
     def __init__(self, frequency: int, max_evaluations: int, output_directory: str = "Pareto_Plots", 
                  objective_labels: list = ["Objetivo 1", "Objetivo 2"], penalty_threshold: float = 1000.0):
@@ -272,7 +272,7 @@ class LivePlotObserver(Observer):
 
         :param frequency: Número de evaluaciones entre cada actualización gráfica.
         :param max_evaluations: Número máximo de evaluaciones esperadas (para escalado/historial).
-        :param output_directory: Directorio destino para guardar las imágenes PNG.
+        :param output_directory: Directorio destino para guardar las imágenes PDF.
         :param objective_labels: Lista con los nombres de los ejes X e Y para la gráfica.
         :param penalty_threshold: Umbral máximo para filtrar soluciones con penalizaciones (ej. CST timeout).
         """
@@ -336,10 +336,10 @@ class LivePlotObserver(Observer):
             ax.set_xlabel(self.objective_labels[0])
             ax.set_ylabel(self.objective_labels[1])
             ax.grid(True, linestyle='--', alpha=0.7)
-            ax.legend()
+            ax.legend(loc='best')
             
-            plot_filename = f"{self.output_directory}/front_{evaluations}.png"
-            plt.savefig(plot_filename, bbox_inches='tight', dpi=300)
+            plot_filename = f"{self.output_directory}/front_{evaluations}.pdf"
+            plt.savefig(plot_filename, bbox_inches='tight')
             plt.close(fig) 
             
             print(f"--> Gráfica del Frente de Pareto guardada: {plot_filename}")
@@ -378,10 +378,10 @@ class LivePlotObserver(Observer):
             ax.set_ylabel(self.objective_labels[1])
             ax.grid(True, linestyle='--', alpha=0.7)
             
-            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            ax.legend(loc='best')
             
-            summary_filename = f"{self.output_directory}/Summary_hasta_eval_{current_eval}.png"
-            plt.savefig(summary_filename, bbox_inches='tight', dpi=300)
+            summary_filename = f"{self.output_directory}/Summary_hasta_eval_{current_eval}.pdf"
+            plt.savefig(summary_filename, bbox_inches='tight')
             plt.close(fig)
             
             print(f"--> Gráfica resumen acumulada guardada en: {summary_filename}")
@@ -391,7 +391,7 @@ class AntenaGraficasObserver(Observer):
     def __init__(self, frequency: int, output_directory: str = "Plots_CST"):
         """
         :param frequency: Cada cuántas evaluaciones queremos generar la gráfica.
-        :param output_directory: Carpeta donde se guardarán las imágenes .png.
+        :param output_directory: Carpeta donde se guardarán las imágenes .pdf.
         """
         self.frequency = frequency
         self.output_directory = output_directory
@@ -409,7 +409,6 @@ class AntenaGraficasObserver(Observer):
             # Cogemos la mejor antena de la generación actual
             mejor_antena = soluciones[0]
             
-            
             # Rescatamos los arrays que escondimos en el evaluate()
             frecuencia = mejor_antena.attributes.get('frecuencia')
             s11_imag = mejor_antena.attributes.get('s11_imag')
@@ -421,51 +420,67 @@ class AntenaGraficasObserver(Observer):
             if frecuencia is None:
                 return # Si la antena dio error en CST y no hay datos, saltamos
 
-            print(f"--> [Observer] Guardando 4 gráficas PNG de la evaluación {evaluaciones}...")
+            print(f"--> [Observer] Guardando 4 gráficas PDF de la evaluación {evaluaciones}...")
 
-            # S11 Imaginario
-            plt.figure()
+            # Calcular límites y divisiones (ticks) comunes para el eje X
+            f_min, f_max = min(frecuencia), max(frecuencia)
+            # Generamos 5 marcas exactas equidistantes para el eje X
+            x_ticks = np.linspace(f_min, f_max, 5)
+
+            # --- S11 Imaginario ---
+            plt.figure(figsize=(7, 5))
             plt.plot(frecuencia, s11_imag, color='blue')
             plt.title(f'S1,1 Imaginario - Eval {evaluaciones}')
-            plt.grid(True)
-            plt.savefig(f"{self.output_directory}/S11_Imag_eval_{evaluaciones}.png")
+            plt.xlabel('Frecuencia (GHz)')
+            plt.ylabel('Amplitud')
+            plt.xlim(f_min, f_max)
+            plt.xticks(x_ticks)
+            plt.grid(True, linestyle='--', alpha=0.7)
+            plt.savefig(f"{self.output_directory}/S11_Imag_eval_{evaluaciones}.pdf", bbox_inches='tight')
             plt.close() 
             
-            # S11 Real
-            plt.figure()
+            # --- S11 Real ---
+            plt.figure(figsize=(7, 5))
             plt.plot(frecuencia, s11_real, color='red')
             plt.title(f'S1,1 Real - Eval {evaluaciones}')
-            plt.grid(True)
-            plt.savefig(f"{self.output_directory}/S11_Real_eval_{evaluaciones}.png")
+            plt.xlabel('Frecuencia (GHz)')
+            plt.ylabel('Amplitud')
+            plt.xlim(f_min, f_max)
+            plt.xticks(x_ticks)
+            plt.grid(True, linestyle='--', alpha=0.7)
+            plt.savefig(f"{self.output_directory}/S11_Real_eval_{evaluaciones}.pdf", bbox_inches='tight')
             plt.close()
 
-            # S11 dB
-            plt.figure()
+            # --- S11 dB ---
+            plt.figure(figsize=(7, 5))
             plt.plot(frecuencia, s11_db, color='red')
             plt.title(f'S1,1 (dB) - Eval {evaluaciones}')
-            plt.grid(True)
-            plt.savefig(f"{self.output_directory}/S11_dB_eval_{evaluaciones}.png")
+            plt.xlabel('Frecuencia (GHz)')
+            plt.ylabel('Magnitud (dB)')
+            plt.xlim(f_min, f_max)
+            plt.xticks(x_ticks)
+            plt.grid(True, linestyle='--', alpha=0.7)
+            plt.savefig(f"{self.output_directory}/S11_dB_eval_{evaluaciones}.pdf", bbox_inches='tight')
             plt.close()
             
-            # Axial Ratio
-            plt.figure()
+            # --- Axial Ratio ---
+            plt.figure(figsize=(7, 5))
             plt.plot(frec_farfield, axial_ratios, color='green', marker='o')
             plt.title(f'Axial Ratio vs Frec - Eval {evaluaciones}')
-            plt.grid(True)
-            plt.savefig(f"{self.output_directory}/Axial_Ratio_eval_{evaluaciones}.png")
+            plt.xlabel('Frecuencia (GHz)')
+            plt.ylabel('Axial Ratio (dB)')
+            plt.xlim(f_min, f_max)
+            plt.xticks(x_ticks)
+            plt.grid(True, linestyle='--', alpha=0.7)
+            plt.savefig(f"{self.output_directory}/Axial_Ratio_eval_{evaluaciones}.pdf", bbox_inches='tight')
             plt.close()
             
 class GuardarResultadosFisicosObserver(Observer):
     
     def __init__(self, frequency: int, algorithm, steps_del_problema: list, output_directory: str = "intermediate_results"):
         """
-        Guarda los archivos FUN y VAR, traduciendo los enteros a las dimensiones 
-        físicas reales e inyectando los líderes históricos si el algoritmo tiene memoria (SMPSO).
-        
-        :param frequency: Número de evaluaciones entre cada guardado.
-        :param algorithm: Instancia del algoritmo en ejecución (para extraer líderes históricos).
-        :param steps_del_problema: Factores de escala multiplicativos para el mapeo geométrico.
-        :param output_directory: Directorio destino para los archivos generados.
+        Guarda los archivos FUN y VAR traduciendo los genotipos a dimensiones físicas reales.
+        Diseñado para ser agnóstico: soporta algoritmos evolutivos (NSGA-II) y de enjambre (SMPSO).
         """
         self.frequency = frequency
         self.algorithm = algorithm  
@@ -476,37 +491,38 @@ class GuardarResultadosFisicosObserver(Observer):
             os.makedirs(self.output_directory, exist_ok=True)
 
     def update(self, *args, **kwargs):
-        evaluations = kwargs["EVALUATIONS"]
-        solutions = kwargs["SOLUTIONS"]
+        evaluaciones = kwargs["EVALUATIONS"]
         problem = kwargs["PROBLEM"]
 
-        if evaluations % self.frequency == 0 and solutions:
+        poblacion_real = getattr(self.algorithm, 'solutions', None)
+
+        if evaluaciones % self.frequency == 0 and poblacion_real:
             problem_name = problem.name()
-            print(f"--> [Observer] Guardando resultados físicos para {problem_name} en evaluación {evaluations}...")
+            print(f"--> [Observer] Guardando resultados físicos para {problem_name} en evaluación {evaluaciones}...")
             
-            # Crear una copia de la población actual para proteger el flujo de ejecución principal
-            solutions_to_save = solutions.copy()
+            # Crear una copia superficial para no alterar el flujo del motor de jMetalPy
+            solutions_to_save = poblacion_real.copy()
             
-            # Estrategia anti-amnesia para SMPSO
-            # Si el algoritmo opera con un archivo externo de líderes, los incrustamos 
-            # en las primeras posiciones para que no se pierda el frente histórico en el reinicio.
             if hasattr(self.algorithm, 'leaders'):
                 leaders = self.algorithm.leaders.solution_list
-                for i in range(min(len(leaders), len(solutions_to_save))):
+                # Inyectamos líderes histórico sin sobrepasar la mitad de la población
+                # para asegurar la diversidad en caso de un reinicio en caliente (warm-start)
+                max_reemplazos = min(len(leaders), len(solutions_to_save) // 2)
+                for i in range(max_reemplazos):
                     solutions_to_save[i] = leaders[i]
             
-            # Guardar el archivo de funciones objetivo (FUN) con el frente corregido
-            fun_filename = f"{self.output_directory}/FUN.{problem_name}.{evaluations}"
+            # Guardar el archivo FUN sincronizado
+            fun_filename = f"{self.output_directory}/FUN.{problem_name}.{evaluaciones}"
             print_function_values_to_file(solutions_to_save, fun_filename)
 
-            # Guardar el archivo de variables (VAR) traduciendo a medidas FÍSICAS reales
-            var_filename = f"{self.output_directory}/VAR.{problem_name}.{evaluations}"
+            # Guardar el archivo VAR mapeando las variables al mundo físico
+            var_filename = f"{self.output_directory}/VAR.{problem_name}.{evaluaciones}"
             
             with open(var_filename, "w") as f:
-                for s in solutions_to_save:  # Recorremos la lista corregida (sincronizada con FUN)
-                    # Traducimos de entero a dimensión física real (mm) para cada variable
+                for s in solutions_to_save: 
+                    # Traducimos de entero a dimensión física real (mm o grados)
                     vars_fisicas = [var * step for var, step in zip(s.variables, self.steps)]
                     
-                    # Convertimos a texto con 3 decimales, separado por tabulaciones, y escribimos en disco
+                    # Convertimos a texto con 3 decimales y escribimos en disco
                     linea = "\t".join([f"{v:.3f}" for v in vars_fisicas])
                     f.write(linea + "\n")

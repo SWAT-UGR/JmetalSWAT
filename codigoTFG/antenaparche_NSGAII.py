@@ -15,7 +15,7 @@ if __name__ == "__main__":
     print("--> Leyendo archivo de configuración...")
     config = configparser.ConfigParser()
     # Leemos el archivo txt (asegúrate de que esté en la misma carpeta)
-    config.read('conf_NSGAII.txt', encoding='utf-8')
+    config.read('conf_NSGAII_monofreq.txt', encoding='utf-8')
     
     # --- 1. EXTRACCIÓN DE PARÁMETROS DEL TXT ---
     
