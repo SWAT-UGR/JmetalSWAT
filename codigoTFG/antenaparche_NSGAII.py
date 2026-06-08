@@ -52,9 +52,10 @@ if __name__ == "__main__":
     # Lógica de rescate inteligente
     usar_rescate = config.getboolean('WARM_START', 'usar_rescate')
     if usar_rescate:
-        ruta_rescate = config.get('WARM_START', 'ruta_archivo_rescate')
-        print(f"--> Modo Warm-Start ACTIVADO. Cargando desde: {ruta_rescate}")
-        generador_inicial = InjectorFromFile(ruta_archivo=ruta_rescate, problem=problem)
+        ruta_rescate_VAR = config.get('WARM_START', 'ruta_archivo_VAR')
+        ruta_rescate_FUN = config.get('WARM_START', 'ruta_archivo_FUN')
+        print(f"--> Modo Warm-Start ACTIVADO. Cargando desde: {ruta_rescate_VAR}")
+        generador_inicial = InjectorFromFile(ruta_var=ruta_rescate_VAR,ruta_fun=ruta_rescate_FUN , problem=problem)
     else:
         print("--> Modo Warm-Start DESACTIVADO. Generando población aleatoria.")
         generador_inicial = RandomGenerator()

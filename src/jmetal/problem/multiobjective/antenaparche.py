@@ -451,7 +451,7 @@ class antenaparcheIntegerMono(IntegerProblem):
     def __init__(self, rutas_config: dict, number_of_variables: int = 22):
         """:param number_of_variables: Number of decision variables of the problem."""
         
-        super(antenaparcheInteger, self).__init__()
+        super(antenaparcheIntegerMono, self).__init__()
         
         self.obj_directions = [self.MINIMIZE, self.MINIMIZE]
         self.obj_labels = ["S11", "axial_ratios"]
