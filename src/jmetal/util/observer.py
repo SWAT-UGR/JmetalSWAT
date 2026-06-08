@@ -274,19 +274,13 @@ class SaveResultsObserver(Observer):
             # Volcar los datos matriciales al disco usando la lista corregida
             print_function_values_to_file(solutions_to_save, fun_filename)
             print_variables_to_file(solutions_to_save, var_filename)
-            
+
 class LivePlotObserver:
     
     def __init__(self, frequency: int, max_evaluations: int,algorithm=None, output_directory: str = "Pareto_Plots", 
                  objective_labels: list = ["Objetivo 1", "Objetivo 2"], penalty_threshold: float = 1000.0):
         """
         Observador para la renderización dinámica y guardado del frente de Pareto bidimensional.
-
-        :param frequency: Número de evaluaciones entre cada actualización gráfica.
-        :param max_evaluations: Número máximo de evaluaciones esperadas (para escalado/historial).
-        :param output_directory: Directorio destino para guardar las imágenes PDF.
-        :param objective_labels: Lista con los nombres de los ejes X e Y para la gráfica.
-        :param penalty_threshold: Umbral máximo para filtrar soluciones con penalizaciones (ej. CST timeout).
         """
         self.frequency = frequency
         self.max_evaluations = max_evaluations
@@ -316,6 +310,7 @@ class LivePlotObserver:
             if self.algorithm and hasattr(self.algorithm, 'leaders'):
                 pareto_front = self.algorithm.leaders.solution_list
             else:
+                # Asume que esta función la tienes importada/definida en tu script
                 pareto_front = get_non_dominated_solutions(solutions)
             
             x_values = []
@@ -326,7 +321,7 @@ class LivePlotObserver:
                 val_x = sol.objectives[0]
                 val_y = sol.objectives[1]
                 
-                # Filtro de viabilidad: descartar valores atípicos o penalizaciones del simulador
+                # Filtro de viabilidad: descartar valores atípicos
                 if val_x < self.penalty_threshold and val_y < self.penalty_threshold:
                     x_values.append(val_x)
                     y_values.append(val_y)
@@ -334,22 +329,36 @@ class LivePlotObserver:
             if not x_values:
                 return
         
-            # Almacenar los datos filtrados en el historial para la gráfica acumulada
+            # Almacenar los datos en el historial
             self.history.append({
                 "eval": evaluations,
                 "x": x_values, 
                 "y": y_values
             })
             
-            # Generar y guardar la gráfica individual de la generación actual
+            # -------------------------------------------------------------------------
+            # 1. GENERAMOS PRIMERO LA GRÁFICA RESUMEN
+            # Esto nos devolverá los límites globales (x e y) calculados para TODO el historial
+            # -------------------------------------------------------------------------
+            xlims, ylims = self.plot_summary(problem_name, evaluations)
+            
+            # -------------------------------------------------------------------------
+            # 2. GENERAMOS LA GRÁFICA INDIVIDUAL USANDO LOS LÍMITES DEL RESUMEN
+            # -------------------------------------------------------------------------
             fig, ax = plt.subplots(figsize=(6, 4))
             
-            # Renderizar el gráfico de dispersión con el frente actual
-            ax.scatter(x_values, y_values, c='red', alpha=0.8, edgecolors='black', label=f'Pareto Eval {evaluations}')
+            # Renderizar el gráfico de dispersión con el frente actual en amarillo
+            ax.scatter(x_values, y_values, c='yellow', alpha=0.8, edgecolors='black', label=f'Pareto Eval {evaluations}')
              
             ax.set_title(f"Frente de Pareto: Evaluación {evaluations}")
             ax.set_xlabel(self.objective_labels[0])
             ax.set_ylabel(self.objective_labels[1])
+            
+            # APLICAMOS LOS LÍMITES EXTRAÍDOS DEL SUMMARY
+            if xlims and ylims:
+                ax.set_xlim(xlims)
+                ax.set_ylim(ylims)
+                
             ax.grid(True, linestyle='--', alpha=0.7)
             ax.legend(loc='best')
             
@@ -357,13 +366,11 @@ class LivePlotObserver:
             plt.savefig(plot_filename, bbox_inches='tight')
             plt.close(fig) 
             
-            print(f"--> Gráfica del Frente de Pareto guardada: {plot_filename}")
+            print(f"--> Gráfica del Frente de Pareto individual guardada: {plot_filename}\n")
             
-            # Invocar la generación de la gráfica resumen acumulada
-            self.plot_summary(problem_name, evaluations)
             
     def plot_summary(self, problem_name, current_eval):
-        """Genera un gráfico combinado mostrando la evolución de todos los frentes almacenados."""
+        """Genera un gráfico combinado mostrando la evolución de todos los frentes almacenados y devuelve los ejes."""
         print(f"--> Generando gráfica resumen acumulada hasta la evaluación {current_eval}...")
         
         fig, ax = plt.subplots(figsize=(8, 5.5))
@@ -372,8 +379,12 @@ class LivePlotObserver:
         if total_plots > 0:
             colors = plt.cm.viridis(np.linspace(0, 1, total_plots))
             
+            # (OPCIONAL) Añadir la zona verde en el summary. Descomenta estas 2 líneas si lo quieres:
+            # rect_summary = patches.Rectangle((-40, 0), -10 - (-40), 3 - 0, linewidth=0, facecolor='green', alpha=0.15)
+            # ax.add_patch(rect_summary)
+            
             for i, data in enumerate(self.history):
-                # Destacar visualmente las iteraciones más recientes (mayor opacidad y tamaño)
+                # Destacar visualmente las iteraciones más recientes
                 alpha_val = 0.4 if i < total_plots - 1 else 1.0
                 size_val = 40 if i < total_plots - 1 else 80
                 edge_color = 'black' if i == total_plots - 1 else 'none'
@@ -395,12 +406,20 @@ class LivePlotObserver:
             
             ax.legend(loc='upper right', framealpha=0.9, edgecolor='black')
             
+            # ¡LA MAGIA AQUÍ!: Extraemos los límites exactos calculados por Matplotlib
+            xlims = ax.get_xlim()
+            ylims = ax.get_ylim()
+            
             summary_filename = f"{self.output_directory}/Summary_hasta_eval_{current_eval}.pdf"
             plt.savefig(summary_filename, bbox_inches='tight')
             plt.close(fig)
             
             print(f"--> Gráfica resumen acumulada guardada en: {summary_filename}")
             
+            # Devolvemos los límites al método update()
+            return xlims, ylims
+            
+        return None, None
             
 class AntenaGraficasObserver(Observer):
     def __init__(self, frequency: int, output_directory: str = "Plots_CST"):
