@@ -78,7 +78,7 @@ class InjectorFromFile(InjectorGenerator):
             
             # --- LÓGICA GENERALIZADA MULTI-TIPO ---
             
-            # Caso 1: Problema personalizado con escalado físico (Tu TFG)
+            # Caso 1: Problema personalizado con escalado físico
             if hasattr(problem, 'steps') and problem.steps is not None:
                 nueva_sol.variables = [int(round(v / s)) for v, s in zip(fila, problem.steps)]
                 
@@ -103,10 +103,11 @@ class InjectorFromFile(InjectorGenerator):
                 nueva_sol.variables = list(fila)
             # ---------------------------------------
             
-            # --- INYECCIÓN DEL FITNESS (LA MAGIA DEL WARM-START) ---
+            # --- INYECCIÓN DEL FITNESS ---
             if datos_fun is not None:
-                # Inyectamos los objetivos históricos. Así jMetalPy sabrá que ya están evaluadas.
                 nueva_sol.objectives = list(datos_fun[i])
+                # AÑADIR ESTA LÍNEA CRÍTICA:
+                nueva_sol.attributes['viene_de_warm_start'] = True
                 
             soluciones_para_inyectar.append(nueva_sol)
             

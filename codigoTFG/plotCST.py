@@ -134,7 +134,7 @@ def evaluate(vars_algoritmo):
         ruta_macro_temporal  = r"C:\Users\jmate\Desktop\teleco\TFG\CST\Macro_To_Run - copia.bas"
         
         # Generamos la macro con los pasos del Excel
-        #generar_macro_cst(vars_algoritmo, ruta_plantilla_macro, ruta_macro_temporal)
+        generar_macro_cst(vars_algoritmo, ruta_plantilla_macro, ruta_macro_temporal)
         
         # CST se abre oculto, simula, exporta los .txt y se cierra
         ejecutar_cst_en_segundo_plano(ruta_macro_temporal)
@@ -253,6 +253,7 @@ if __name__ == "__main__":
         2.5,   # x_feed
         0.5    # y_feed
     ]
+    variables_iniciales = [13.830,	13.249,	48.758,	46.739,	2.089,	1.644,	3.649,	3.341,	4.138,	4.509,	0.870,	1.552,	0.623,	1.278,	47.655,	37.605,	52.062,	61.633,	-0.254,	-0.830,	0.063,	-2.938]
     tiempo_inicio = time.time()
     # Ejecutamos la prueba
     evaluate(variables_iniciales)

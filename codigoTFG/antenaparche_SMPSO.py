@@ -51,7 +51,7 @@ if __name__ == "__main__":
         ruta_rescate_VAR = config.get('WARM_START', 'ruta_archivo_VAR')
         ruta_rescate_FUN = config.get('WARM_START', 'ruta_archivo_FUN')
         print(f"--> Modo Warm-Start ACTIVADO. Cargando desde: {ruta_rescate_VAR}")
-        generador_inicial = InjectorFromFile(ruta_var=ruta_rescate_VAR,ruta_fun=ruta_rescate_FUN , problem=problem)
+        generador_inicial = InjectorFromFile(ruta_var=ruta_rescate_VAR,ruta_fun=None , problem=problem)
     else:
         print("--> Modo Warm-Start DESACTIVADO. Generando población aleatoria.")
         generador_inicial = RandomGenerator()
@@ -65,6 +65,7 @@ if __name__ == "__main__":
         ),        
         leaders=CrowdingDistanceArchive(capacidad_arch),
         termination_criterion=StoppingByEvaluations(max_evaluations=max_evaluations),
+        swarm_generator=generador_inicial
     )
     
     # --- 4. REGISTRO DE OBSERVERS ---
@@ -83,6 +84,7 @@ if __name__ == "__main__":
     
     plotter_pareto = LivePlotObserver(
         frequency=frecuencia_obs, 
+        algorithm=algorithm,
         max_evaluations=max_evaluations,  
         output_directory=dir_pareto,
         objective_labels=["S11 (dB) [Minimizar]", "Axial Ratio (dB) [Minimizar]"],

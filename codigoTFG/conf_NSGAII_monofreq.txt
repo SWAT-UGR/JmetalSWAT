@@ -1,17 +1,17 @@
 [DIRECTORIOS]
 # Rutas donde se guardarán los resultados y gráficas. 
 # Importante: No pongas comillas alrededor de las rutas.
-carpeta_resultados_vars = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_NSGAII_monofreq\intermediate_results_0
-carpeta_graficas_cst = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\CST_plots_NSGAII_monofreq\Plots cst_0
-carpeta_graficas_pareto = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Frentes_pareto_NSGAII_monofreq\Pareto_Plots_0
+carpeta_resultados_vars = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_NSGAII_monofreq\intermediate_results_1600
+carpeta_graficas_cst = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\CST_plots_NSGAII_monofreq\Plots cst_1600
+carpeta_graficas_pareto = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Frentes_pareto_NSGAII_monofreq\Pareto_Plots_1600
 
 [WARM_START]
 # Pon 'True' si quieres cargar una población anterior, o 'False' para empezar de cero
-usar_rescate = False
+usar_rescate = True
 # Ruta del archivo VAR a cargar (solo se usa si usar_rescate = True)
-ruta_archivo_var = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_NSGAII_monofreq\intermediate_results_1900\VAR.antenaparcheInteger.900
+ruta_archivo_var = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_NSGAII_monofreq\intermediate_results_0\VAR.antenaparcheInteger.1600
 # Ruta del archivo FUN a cargar (solo se usa si usar_rescate = True)
-ruta_archivo_fun= C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_NSGAII_monofreq\intermediate_results_1900\FUN.antenaparcheInteger.900
+ruta_archivo_fun= C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_NSGAII_monofreq\intermediate_results_0\FUN.antenaparcheInteger.1600
 
 [ALGORITMO]
 # Parámetros generales de la optimización

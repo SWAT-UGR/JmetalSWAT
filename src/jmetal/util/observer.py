@@ -14,6 +14,18 @@ from jmetal.util.solution import print_function_values_to_file, print_variables_
 from jmetal.util.solution import get_non_dominated_solutions
 import matplotlib.pyplot as plt
 
+# --- CONFIGURACIÓN GLOBAL ÓPTIMA PARA LATEX ---
+plt.rcParams.update({
+    'font.size': 14,          # Letra base bastante grande
+    'axes.titlesize': 16,     # Títulos que destaquen claramente
+    'axes.labelsize': 16,     # Ejes X e Y legibles
+    'xtick.labelsize': 14,    # Números del eje X
+    'ytick.labelsize': 14,    # Números del eje Y
+    'legend.fontsize': 14,    # Leyenda que no desaparezca al encoger
+    'figure.titlesize': 18    # Títulos superiores (si los hay)
+})
+# ----------------------------------------------
+
 S = TypeVar("S")
 
 LOGGER = logging.getLogger("jmetal")
@@ -265,7 +277,7 @@ class SaveResultsObserver(Observer):
             
 class LivePlotObserver:
     
-    def __init__(self, frequency: int, max_evaluations: int, output_directory: str = "Pareto_Plots", 
+    def __init__(self, frequency: int, max_evaluations: int,algorithm=None, output_directory: str = "Pareto_Plots", 
                  objective_labels: list = ["Objetivo 1", "Objetivo 2"], penalty_threshold: float = 1000.0):
         """
         Observador para la renderización dinámica y guardado del frente de Pareto bidimensional.
@@ -278,6 +290,7 @@ class LivePlotObserver:
         """
         self.frequency = frequency
         self.max_evaluations = max_evaluations
+        self.algorithm = algorithm
         self.output_directory = output_directory
         self.objective_labels = objective_labels
         self.penalty_threshold = penalty_threshold
@@ -300,8 +313,10 @@ class LivePlotObserver:
         if evaluations % self.frequency == 0:
             problem_name = problem.name()
             
-            # Extraer matemáticamente SOLO el conjunto de soluciones no dominadas (Frente de Pareto)
-            pareto_front = get_non_dominated_solutions(solutions)
+            if self.algorithm and hasattr(self.algorithm, 'leaders'):
+                pareto_front = self.algorithm.leaders.solution_list
+            else:
+                pareto_front = get_non_dominated_solutions(solutions)
             
             x_values = []
             y_values = []
@@ -332,7 +347,7 @@ class LivePlotObserver:
             # Renderizar el gráfico de dispersión con el frente actual
             ax.scatter(x_values, y_values, c='red', alpha=0.8, edgecolors='black', label=f'Pareto Eval {evaluations}')
              
-            ax.set_title(f"Frente de Pareto Real: Evaluación {evaluations}")
+            ax.set_title(f"Frente de Pareto: Evaluación {evaluations}")
             ax.set_xlabel(self.objective_labels[0])
             ax.set_ylabel(self.objective_labels[1])
             ax.grid(True, linestyle='--', alpha=0.7)
@@ -351,7 +366,7 @@ class LivePlotObserver:
         """Genera un gráfico combinado mostrando la evolución de todos los frentes almacenados."""
         print(f"--> Generando gráfica resumen acumulada hasta la evaluación {current_eval}...")
         
-        fig, ax = plt.subplots(figsize=(10, 7))
+        fig, ax = plt.subplots(figsize=(8, 5.5))
         
         total_plots = len(self.history)
         if total_plots > 0:
@@ -360,7 +375,7 @@ class LivePlotObserver:
             for i, data in enumerate(self.history):
                 # Destacar visualmente las iteraciones más recientes (mayor opacidad y tamaño)
                 alpha_val = 0.4 if i < total_plots - 1 else 1.0
-                size_val = 20 if i < total_plots - 1 else 50
+                size_val = 40 if i < total_plots - 1 else 80
                 edge_color = 'black' if i == total_plots - 1 else 'none'
                 
                 ax.scatter(
@@ -373,12 +388,12 @@ class LivePlotObserver:
                     s=size_val 
                 )
                 
-            ax.set_title(f"Evolución del Frente de Pareto (Hasta Eval {current_eval}): {problem_name}")
+            ax.set_title(f"Evolución del frente de Pareto: {problem_name}")
             ax.set_xlabel(self.objective_labels[0])
             ax.set_ylabel(self.objective_labels[1])
             ax.grid(True, linestyle='--', alpha=0.7)
             
-            ax.legend(loc='best')
+            ax.legend(loc='upper right', framealpha=0.9, edgecolor='black')
             
             summary_filename = f"{self.output_directory}/Summary_hasta_eval_{current_eval}.pdf"
             plt.savefig(summary_filename, bbox_inches='tight')

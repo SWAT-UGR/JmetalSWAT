@@ -2,7 +2,7 @@ import configparser
 from jmetal.algorithm.multiobjective.nsgaii import NSGAII
 from jmetal.operator.crossover import IntegerSBXCrossover
 from jmetal.operator.mutation import IntegerPolynomialMutation
-from jmetal.problem import antenaparcheInteger
+from jmetal.problem import antenaparcheIntegerMono
 from jmetal.util.observer import ProgressBarObserver, LivePlotObserver, GuardarResultadosFisicosObserver, AntenaGraficasObserver
 from jmetal.util.termination_criterion import StoppingByEvaluations
 from jmetal.util.generator import InjectorFromFile, RandomGenerator
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     frecuencia_obs = config.getint('OBSERVERS', 'frecuencia_guardado')
     
     # --- 2. CONFIGURACIÓN DEL PROBLEMA Y GENERADOR ---
-    problem = antenaparcheInteger(rutas_config=rutas_cst)
+    problem = antenaparcheIntegerMono(rutas_config=rutas_cst)
     
     # Lógica de rescate inteligente
     usar_rescate = config.getboolean('WARM_START', 'usar_rescate')

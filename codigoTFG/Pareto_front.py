@@ -3,6 +3,18 @@ import numpy as np
 import os
 import glob
 
+# --- CONFIGURACIÓN GLOBAL ÓPTIMA PARA LATEX ---
+plt.rcParams.update({
+    'font.size': 14,          # Letra base bastante grande
+    'axes.titlesize': 16,     # Títulos que destaquen claramente
+    'axes.labelsize': 16,     # Ejes X e Y legibles
+    'xtick.labelsize': 14,    # Números del eje X
+    'ytick.labelsize': 14,    # Números del eje Y
+    'legend.fontsize': 14,    # Leyenda que no desaparezca al encoger
+    'figure.titlesize': 18    # Títulos superiores (si los hay)
+})
+# ----------------------------------------------
+
 def get_non_dominated_solutions(puntos):
     """
     Filtra una matriz 2D para devolver matemáticamente SOLO las soluciones no dominadas (Frente de Pareto).
@@ -29,8 +41,8 @@ def extraer_numero(ruta):
         return 0
 
 # --- CONFIGURACIÓN DE DIRECTORIOS ---
-carpeta_resultados = r"C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_SMPSO_monofreq\todo"
-output_directory = os.path.join(carpeta_resultados, "todo")
+carpeta_resultados = r"C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_NSGAII\todo"
+output_directory = os.path.join(carpeta_resultados, "todo2")
 
 # Crear el directorio para las gráficas si no existe
 if not os.path.exists(output_directory):
@@ -76,15 +88,18 @@ for archivo in archivos_fun:
         })
         
         # Generar y guardar la gráfica INDIVIDUAL
-        fig, ax = plt.subplots(figsize=(6, 4))
+        # CAMBIO: Subimos ligeramente a (7, 5) para que las letras grandes "respiren" sin solaparse
+        fig, ax = plt.subplots(figsize=(7, 5))
         ax.scatter(x_values, y_values, c='red', alpha=0.8, edgecolors='black', label=f'Pareto Eval {eval_num}')
         ax.set_title(f"Frente de Pareto: Evaluación {eval_num}")
         ax.set_xlabel(objective_labels[0])
         ax.set_ylabel(objective_labels[1])
         ax.grid(True, linestyle='--', alpha=0.7)
-        ax.legend(loc='best') # Aseguramos que la leyenda individual busque el mejor sitio interno
         
-        # CAMBIO: Extensión PDF y se elimina dpi
+        # CAMBIO: Quitamos modificadores de fuente locales para forzar la herencia de rcParams
+        ax.legend(loc='best') 
+        
+        # Extensión PDF y se elimina dpi
         plot_filename = os.path.join(output_directory, f"front_{eval_num}.pdf")
         plt.savefig(plot_filename, bbox_inches='tight')
         plt.close(fig) 
@@ -97,13 +112,15 @@ print("Generando gráfica resumen acumulada...")
 total_plots = len(history)
 
 if total_plots > 0:
-    fig, ax = plt.subplots(figsize=(10, 7))
+    # CAMBIO: Reducimos de (10, 7) a (8, 5.5) para evitar aplastamientos extremos en LaTeX
+    fig, ax = plt.subplots(figsize=(8, 5.5))
     colors = plt.cm.viridis(np.linspace(0, 1, total_plots))
     
     for i, data in enumerate(history):
-        # Destacar visualmente la iteración más reciente (mayor opacidad y tamaño, borde negro)
+        # Destacar visualmente la iteración más reciente
         alpha_val = 0.7 if i < total_plots - 1 else 1.0
-        size_val = 25 if i < total_plots - 1 else 50
+        # CAMBIO: Puntos notablemente más grandes para que destaquen al encoger la imagen
+        size_val = 40 if i < total_plots - 1 else 80
         edge_color = 'black' if i == total_plots - 1 else 'none'
         
         ax.scatter(
@@ -117,17 +134,17 @@ if total_plots > 0:
         )
         
     last_eval = history[-1]["eval"]
-    ax.set_title(f"Evolución del Frente de Pareto (Hasta Eval {last_eval}): Problema Antena")
+    ax.set_title(f"Evolución del frente de Pareto: Problema AntenaParcheInteger")
     ax.set_xlabel(objective_labels[0])
     ax.set_ylabel(objective_labels[1])
     ax.grid(True, linestyle='--', alpha=0.7)
     
-    # CAMBIO: Leyenda al interior de la gráfica buscando el mejor hueco
-    ax.legend(loc='best', fontsize='small')
+    # CAMBIO: Quitamos fontsize='small' e insertamos markerscale=1.5 para engrandecer los puntos de la leyenda
+    ax.legend(loc='upper right', framealpha=0.9, edgecolor='black')
     
     plt.tight_layout()
     
-    # CAMBIO: Extensión PDF y se elimina dpi
+    # Extensión PDF y se elimina dpi
     summary_filename = os.path.join(output_directory, f"Summary_hasta_eval_{last_eval}.pdf")
     plt.savefig(summary_filename, bbox_inches='tight')
     print(f"--> ¡Proceso terminado! Gráficas guardadas en: {output_directory}")
