@@ -1,17 +1,17 @@
 [DIRECTORIOS]
 # Rutas donde se guardarán los resultados y gráficas. 
 # Importante: No pongas comillas alrededor de las rutas.
-carpeta_resultados_vars = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_SMPSO\intermediate_results_6400_0
-carpeta_graficas_cst = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\CST_plots_SMPSO\Plots cst_6400_0
-carpeta_graficas_pareto = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Frentes_pareto_SMPSO\Pareto_Plots_6400_0
+carpeta_resultados_vars = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_SMPSO\intermediate_results_6400_4900
+carpeta_graficas_cst = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\CST_plots_SMPSO\Plots cst_6400_4900
+carpeta_graficas_pareto = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Frentes_pareto_SMPSO\Pareto_Plots_6400_4900
 
 [WARM_START]
 # Pon 'True' si quieres cargar una población anterior, o 'False' para empezar de cero
 usar_rescate = True
 # Ruta del archivo VAR a cargar (solo se usa si usar_rescate = True)
-ruta_archivo_var = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_SMPSO\intermediate_results_1400\VAR.antenaparcheInteger.5000
+ruta_archivo_var = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_SMPSO\intermediate_results_6400_0\VAR.antenaparcheInteger.4900
 # Ruta del archivo FUN a cargar (solo se usa si usar_rescate = True)
-ruta_archivo_fun = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_SMPSO\intermediate_results_6400\FUN.antenaparcheInteger.5000
+ruta_archivo_fun = C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_SMPSO\intermediate_results_6400_0\FUN.antenaparcheInteger.4900
 [ALGORITMO]
 # Parámetros generales de la optimización
 max_evaluaciones = 10000

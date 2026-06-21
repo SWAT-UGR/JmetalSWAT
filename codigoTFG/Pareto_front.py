@@ -1,39 +1,45 @@
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches  # <-- NUEVO: Para dibujar la zona sombreada
+import matplotlib.patches as patches  # Generación de primitivas geométricas para el acotado de regiones factibles
 import numpy as np
 import os
 import glob
 
-# --- CONFIGURACIÓN GLOBAL ÓPTIMA PARA LATEX ---
+# =============================================================================
+# CONFIGURACIÓN DE PARÁMETROS GRÁFICOS DE MATPLOTLIB ADAPTADOS PARA LATEX
+# =============================================================================
 plt.rcParams.update({
-    'font.size': 14,          # Letra base bastante grande
-    'axes.titlesize': 16,     # Títulos que destaquen claramente
-    'axes.labelsize': 16,     # Ejes X e Y legibles
-    'xtick.labelsize': 14,    # Números del eje X
-    'ytick.labelsize': 14,    # Números del eje Y
-    'legend.fontsize': 14,    # Leyenda que no desaparezca al encoger
-    'figure.titlesize': 18    # Títulos superiores (si los hay)
+    'font.family': 'serif',   # Cambia la fuente al estilo clásico de LaTeX
+    'font.size': 14,          # Escala base de la fuente para garantizar legibilidad en maquetación A4
+    'axes.labelsize': 16,     # Escala de las etiquetas descriptivas de los objetivos métricos
+    'xtick.labelsize': 14,    # Dimensión tipográfica de los índices numéricos del eje X
+    'ytick.labelsize': 14,    # Dimensión tipográfica de los índices numéricos del eje Y
+    'legend.fontsize': 14     # Escala de la leyenda para evitar pérdida de resolución al vectorizar
+    # Se han eliminado los tamaños de título porque se delega en el \caption de LaTeX
 })
-# ----------------------------------------------
+# ---------------------------------------------------------------------
 
-# --- CONFIGURACIÓN DE LOS EJES (MODIFICA ESTOS NÚMEROS A TU GUSTO) ---
-X_MIN = -50  # Límite mínimo del eje X (S11)
-X_MAX = 0    # Límite máximo del eje X (S11)
-Y_MIN = -0.5    # Límite mínimo del eje Y (Axial Ratio)
-Y_MAX = 20   # Límite máximo del eje Y (Axial Ratio)
+# --- CONFIGURACIÓN DE LOS EJES (Envolventes ortogonales continuas de visualización) ---
+X_MIN = -50  # Cota inferior del espacio de objetivos en el eje X (Pérdidas de retorno S11)
+X_MAX = 0    # Cota superior del espacio de objetivos en el eje X (Pérdidas de retorno S11)
+Y_MIN = -0.5 # Cota inferior del espacio de objetivos en el eje Y (Relación de compromiso axial)
+Y_MAX = 20   # Cota superior del espacio de objetivos en el eje Y (Relación de compromiso axial)
 # ---------------------------------------------------------------------
 
 def get_non_dominated_solutions(puntos):
     """
-    Filtra una matriz 2D para devolver matemáticamente SOLO las soluciones no dominadas (Frente de Pareto).
-    Asume un problema de minimización para ambos objetivos (S11 y Axial Ratio).
+    Filtra una matriz bidimensional de objetivos aplicando el criterio de optimalidad de Pareto.
+    Aísla las soluciones no dominadas correspondientes a un espacio matemático de minimización dual.
+    
+    :param puntos: Matriz con las coordenadas [Obj1, Obj2] extraídas del simulador.
+    :return: Matriz filtrada conteniendo exclusivamente los vectores pertenecientes al frente de Pareto.
     """
     no_dominados = []
     for i, p1 in enumerate(puntos):
         dominado = False
         for j, p2 in enumerate(puntos):
             if i != j:
-                # p2 domina a p1 si es <= en todos los objetivos y estrictamente < en al menos uno
+                # Criterio matemático de dominancia de Pareto para problemas de minimización pura:
+                # p2 domina a p1 si ningún objetivo de p2 es peor y al menos uno es estrictamente mejor.
                 if (p2[0] <= p1[0] and p2[1] <= p1[1]) and (p2[0] < p1[0] or p2[1] < p1[1]):
                     dominado = True
                     break
@@ -42,21 +48,24 @@ def get_non_dominated_solutions(puntos):
     return np.array(no_dominados)
 
 def extraer_numero(ruta):
-    """Extrae el número del final del archivo (ej: FUN.Problema.100 -> 100)"""
+    """
+    Analiza el string de la ruta del sistema de archivos mediante descomposición por tokens
+    para aislar y extraer el índice entero de la evaluación del algoritmo (e.g., FUN.Problema.100 -> 100).
+    """
     try:
         return int(ruta.split('.')[-1])
     except ValueError:
         return 0
 
-# --- CONFIGURACIÓN DE DIRECTORIOS ---
+# --- CONFIGURACIÓN DE DIRECTORIOS Y ENTORNO DE TRABAJO ---
 carpeta_resultados = r"C:\Users\jmate\Desktop\teleco\TFG\Experimentacion\Resultados_NSGAII\todo"
-output_directory = os.path.join(carpeta_resultados, "todo2")
+output_directory = os.path.join(carpeta_resultados, "todo")
 
-# Crear el directorio para las gráficas si no existe
+# Verificación y creación del directorio destinado al almacenamiento de las gráficas vectoriales
 if not os.path.exists(output_directory):
     os.makedirs(output_directory, exist_ok=True)
 
-# Buscamos y ordenamos todos los archivos FUN
+# Recuperación indexada y ordenación cronológica de los históricos de funciones objetivo (FUN)
 archivos_fun = glob.glob(os.path.join(carpeta_resultados, "FUN.*"))
 archivos_fun.sort(key=extraer_numero)
 
@@ -66,81 +75,86 @@ penalty_threshold = 1000.0
 
 print(f"Se han encontrado {len(archivos_fun)} archivos FUN. Procesando...")
 
-# --- PROCESADO INDIVIDUAL ---
+# =============================================================================
+# BLOQUE 1: PROCESADO Y GENERACIÓN DE GRÁFICAS INDIVIDUALES PUNTUALES
+# =============================================================================
 for archivo in archivos_fun:
     try:
         datos = np.loadtxt(archivo)
         eval_num = extraer_numero(archivo)
         
-        # Si solo hay una fila, lo convertimos a matriz 2D para no romper el código
+        # Corrección de consistencia dimensional: reconfiguración de vectores unarios a estructuras matriciales 2D
         if datos.ndim == 1:
             datos = datos.reshape(1, -1)
             
-        # Filtro de viabilidad: descartar valores atípicos o penalizaciones de CST
+        # Filtro de factibilidad: remoción selectiva de especímenes asociados a penalizaciones asintóticas (CST Timeout)
         datos_limpios = datos[(datos[:, 0] < penalty_threshold) & (datos[:, 1] < penalty_threshold)]
         
         if len(datos_limpios) == 0:
             continue
             
-        # Extraer matemáticamente SOLO el conjunto de soluciones no dominadas
+        # Extracción matemática del conjunto frontera no dominado actual
         pareto_front = get_non_dominated_solutions(datos_limpios)
         
         x_values = pareto_front[:, 0]
         y_values = pareto_front[:, 1]
         
-        # Almacenar en el historial para la gráfica resumen acumulada
+        # Persistencia en la estructura histórica para el posterior análisis espectral acumulado
         history.append({
             "eval": eval_num,
             "x": x_values, 
             "y": y_values
         })
         
-        # Generar y guardar la gráfica INDIVIDUAL
+        # Instanciación del entorno de renderizado individual
         fig, ax = plt.subplots(figsize=(7, 5))
         
         # --- ZONA SOMBREADA (VÁLIDA) ---
-        # Dibuja un rectángulo desde (X_MIN, Y_MIN) hasta (-10, 3)
+        # Delimitación geométrica opcional de la ventana de especificaciones técnicas radioeléctricas
         rect = patches.Rectangle((X_MIN, Y_MIN), -10 - X_MIN, 3 - Y_MIN,
-                                 linewidth=0, facecolor='green', alpha=0.15, label='Zona Válida')
+                                 linewidth=0, facecolor='green', alpha=0.15, label='Zona de Compromiso')
         ax.add_patch(rect)
         
-        # CAMBIO: Puntos en 'yellow' con borde negro para que contrasten bien
-        ax.scatter(x_values, y_values, c='yellow', alpha=0.8, edgecolors='black', label=f'Pareto Eval {eval_num}')
+        # Renderizado del diagrama de dispersión del frente discreto contemporáneo
+        ax.scatter(x_values, y_values, c='yellow', alpha=0.8,s=80, edgecolors='black', label=f'Pareto Eval {eval_num}')
         
-        ax.set_title(f"Frente de Pareto: Evaluación {eval_num}")
+        #ax.set_title(f"Frente de Pareto: Evaluación_{eval_num}")
         ax.set_xlabel(objective_labels[0])
         ax.set_ylabel(objective_labels[1])
         
-        # CAMBIO: Fijar los límites de los ejes a lo que definimos arriba
+        # Homogeneización escalar de los ejes coordenados conforme a los límites maestros definidos
         ax.set_xlim([X_MIN, X_MAX])
         ax.set_ylim([Y_MIN, Y_MAX])
         
         ax.grid(True, linestyle='--', alpha=0.7)
         ax.legend(loc='best') 
         
-        # Extensión PDF y se elimina dpi
+        # Guardado en formato vectorial nativo PDF (pad_inches=0 elimina el margen blanco)
         plot_filename = os.path.join(output_directory, f"front_{eval_num}.pdf")
-        plt.savefig(plot_filename, bbox_inches='tight')
+        plt.savefig(plot_filename, bbox_inches='tight', pad_inches=0)
         plt.close(fig) 
         
     except Exception as e:
-        pass # Ignoramos archivos vacíos o corruptos
+        pass # Control de excepciones: omisión asíncrona de archivos corruptos o en proceso de escritura
 
-# --- GRÁFICA RESUMEN ACUMULADA ---
+# =============================================================================
+# BLOQUE 2: GENERACIÓN DE LA GRÁFICA RESUMEN ACUMULADA (Trayectoria del Frente)
+# =============================================================================
 print("Generando gráfica resumen acumulada...")
 total_plots = len(history)
 
 if total_plots > 0:
     fig, ax = plt.subplots(figsize=(8, 5.5))
+    # Generación de una rampa cromática continua basada en el mapa lineal perceptual Viridis
     colors = plt.cm.viridis(np.linspace(0, 1, total_plots))
     
-    # --- ZONA SOMBREADA (VÁLIDA) ---
+    # # --- ZONA SOMBREADA (VÁLIDA) ---
     rect_summary = patches.Rectangle((X_MIN, Y_MIN), -10 - X_MIN, 3 - Y_MIN,
-                                     linewidth=0, facecolor='green', alpha=0.15, label='Zona Válida')
+                                      linewidth=0, facecolor='green', alpha=0.15, label='Zona de Compromiso')
     ax.add_patch(rect_summary)
     
     for i, data in enumerate(history):
-        # Destacar visualmente la iteración más reciente
+        # Gradación analítica de la transparencia y magnitud para contrastar visualmente la convergencia de la última generación
         alpha_val = 0.7 if i < total_plots - 1 else 1.0
         size_val = 40 if i < total_plots - 1 else 80
         edge_color = 'black' if i == total_plots - 1 else 'none'
@@ -156,11 +170,12 @@ if total_plots > 0:
         )
         
     last_eval = history[-1]["eval"]
-    ax.set_title(f"Evolución del frente de Pareto: Problema AntenaParcheInteger")
+    
+    #ax.set_title(f"Evolución del frente de Pareto: Problema AntenaParcheInteger")
     ax.set_xlabel(objective_labels[0])
     ax.set_ylabel(objective_labels[1])
     
-    # CAMBIO: Fijar los límites de los ejes también en la gráfica resumen
+    # Sincronización a escala de las envolventes maestras en la visualización integrada final
     ax.set_xlim([X_MIN, X_MAX])
     ax.set_ylim([Y_MIN, Y_MAX])
     
@@ -169,9 +184,9 @@ if total_plots > 0:
     
     plt.tight_layout()
     
-    # Extensión PDF
+    # Exportación final del plano integrado (pad_inches=0 elimina el margen blanco)
     summary_filename = os.path.join(output_directory, f"Summary_hasta_eval_{last_eval}.pdf")
-    plt.savefig(summary_filename, bbox_inches='tight')
+    plt.savefig(summary_filename, bbox_inches='tight', pad_inches=0)
     print(f"--> ¡Proceso terminado! Gráficas guardadas en: {output_directory}")
     
     plt.show()

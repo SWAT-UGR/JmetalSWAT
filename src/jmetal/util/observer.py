@@ -225,62 +225,74 @@ class VisualizerObserver(Observer):
                 self.figure.ax.set_title("Eval: {}".format(evaluations), fontsize=13)
 
 class SaveResultsObserver(Observer):
-    
+    """
+    Observador de persistencia intermedia de datos. Implementa el patrón estructural Observer
+    para interceptar los vectores de soluciones del algoritmo y exportar de forma periódica
+    los archivos de funciones objetivo (FUN) y variables de decisión (VAR) al disco duro.
+    """
     def __init__(self, frequency: int, algorithm, output_directory: str = "intermediate_results"):
         """
-        Observador encargado de exportar periódicamente las variables y objetivos a disco.
-
-        :param frequency: Número de evaluaciones entre cada guardado.
-        :param algorithm: Instancia del algoritmo en ejecución (para extraer líderes históricos).
-        :param output_directory: Directorio destino para los archivos generados.
+        :param frequency: Frecuencia de muestreo o número de evaluaciones entre ciclos de guardado.
+        :param algorithm: Instancia del motor algorítmico en ejecución (orquestador evolutivo o cinemático).
+        :param output_directory: Descriptor de ruta del sistema de archivos destinado al almacenamiento.
         """
         self.frequency = frequency
         self.algorithm = algorithm
         self.output_directory = output_directory
         
-        # Crear el directorio de salida si no existe
+        # Validación y creación automatizada del directorio destino en el sistema de archivos local
         if not os.path.isdir(self.output_directory):
             os.makedirs(self.output_directory, exist_ok=True)
 
     def update(self, *args, **kwargs):
-        # Extraer la información empaquetada en las notificaciones del algoritmo
+        # Desempaquetado analítico de los parámetros posicionales y nominales del entorno jMetalPy
         evaluations = kwargs["EVALUATIONS"]
         solutions = kwargs["SOLUTIONS"]
         problem = kwargs["PROBLEM"]
         
-        # Comprobar si corresponde guardar los datos según la frecuencia establecida
+        # Verificación del criterio de muestreo periódico conforme al intervalo indexado
         if evaluations % self.frequency == 0:
             problem_name = problem.name()
             
             print(f"--> Guardando resultados intermedios para {problem_name} en la evaluación {evaluations}...")
             
-            # Hacemos una copia superficial de las soluciones para no alterar la RAM del algoritmo
+            # Clonación superficial (shallow copy) de las soluciones para mitigar colisiones en la RAM del algoritmo
             solutions_to_save = solutions.copy()
             
-            # ESTRATEGIA ANTI-AMNESIA (Soporte dinámico SMPSO / NSGA-II)
-            # Si el algoritmo posee un archivo externo de líderes (ej. SMPSO), no podemos perderlos.
+            # -------------------------------------------------------------------------
+            # MECANISMO DE CONTROL PARA COHESIÓN POBLACIONAL (Soporte SMPSO / NSGA-II)
+            # -------------------------------------------------------------------------
+            # Si la metaheurística almacena un repositorio externo de líderes no dominados (ej. SMPSO),
+            # se inyectan de forma prioritaria para asegurar la persistencia en estrategias de re-arranque.
             if hasattr(self.algorithm, 'leaders'):
                 leaders = self.algorithm.leaders.solution_list
-                # Sobrescribimos las primeras posiciones del enjambre con los líderes históricos.
-                # Así el Warm-Start arranca exactamente desde el Frente de Pareto real, 
-                # manteniendo el resto de partículas del enjambre para no perder diversidad.
+                
+                # Inserción posicional selectiva de los especímenes del Frente de Pareto real,
+                # preservando la porción restante del enjambre para salvaguardar la diversidad estocástica.
                 for i in range(min(len(leaders), len(solutions_to_save))):
                     solutions_to_save[i] = leaders[i]
             
-            # 3. Generar las rutas de archivo indexadas por nombre y evaluación
+            # Generación predictiva de la nomenclatura de archivos indexados por metadatos y conteo evolutivo
             fun_filename = f"{self.output_directory}/FUN.{problem_name}.{evaluations}"
             var_filename = f"{self.output_directory}/VAR.{problem_name}.{evaluations}"
             
-            # Volcar los datos matriciales al disco usando la lista corregida
+            # Volcado matricial síncrono al disco utilizando las rutinas nativas de persistencia
             print_function_values_to_file(solutions_to_save, fun_filename)
             print_variables_to_file(solutions_to_save, var_filename)
 
+
 class LivePlotObserver:
-    
-    def __init__(self, frequency: int, max_evaluations: int,algorithm=None, output_directory: str = "Pareto_Plots", 
+    """
+    Observador de caracterización gráfica bidimensional. Gestiona el procesamiento analítico,
+    la acumulación histórica y la renderización dinámica de la frontera no dominada de Pareto
+    durante el transcurso de la optimización estocástica.
+    """
+    def __init__(self, frequency: int, max_evaluations: int, algorithm=None, output_directory: str = "Pareto_Plots", 
                  objective_labels: list = ["Objetivo 1", "Objetivo 2"], penalty_threshold: float = 1000.0):
         """
-        Observador para la renderización dinámica y guardado del frente de Pareto bidimensional.
+        :param max_evaluations: Cota superior del presupuesto computacional de la campaña.
+        :param objective_labels: Descriptores nominales asociados a los ejes coordenados del espacio de objetivos.
+        :param penalty_threshold: Umbral métrico de exclusión para mitigar la distorsión de fenotipos penalizados.
         """
         self.frequency = frequency
         self.max_evaluations = max_evaluations
@@ -290,7 +302,7 @@ class LivePlotObserver:
         self.penalty_threshold = penalty_threshold
         self.history = []
         
-        # Crear el directorio para las gráficas si no existe
+        # Inicialización del entorno jerárquico de carpetas para las representaciones vectoriales
         if not os.path.exists(self.output_directory):
             os.makedirs(self.output_directory, exist_ok=True)
 
@@ -298,7 +310,7 @@ class LivePlotObserver:
         evaluations = kwargs["EVALUATIONS"]
         problem = kwargs["PROBLEM"]
         
-        # Extraer las soluciones directamente de la memoria RAM
+        # Extracción síncrona de los vectores de soluciones residentes en el búfer de memoria
         solutions = kwargs.get("SOLUTIONS")
         
         if not solutions:
@@ -307,21 +319,21 @@ class LivePlotObserver:
         if evaluations % self.frequency == 0:
             problem_name = problem.name()
             
+            # Discriminación del origen de datos: archivo externo (SMPSO) frente a filtrado de dominancia local (NSGA-II)
             if self.algorithm and hasattr(self.algorithm, 'leaders'):
                 pareto_front = self.algorithm.leaders.solution_list
             else:
-                # Asume que esta función la tienes importada/definida en tu script
                 pareto_front = get_non_dominated_solutions(solutions)
             
             x_values = []
             y_values = []
             
-            # Recorrer el frente de Pareto y aislar los objetivos
+            # Descomposición de la frontera no dominada y aislamiento de los vectores objetivo
             for sol in pareto_front:
                 val_x = sol.objectives[0]
                 val_y = sol.objectives[1]
                 
-                # Filtro de viabilidad: descartar valores atípicos
+                # Filtro de acotación analítica: exclusión selectiva de puntos aberrantes por penalización destructiva
                 if val_x < self.penalty_threshold and val_y < self.penalty_threshold:
                     x_values.append(val_x)
                     y_values.append(val_y)
@@ -329,7 +341,7 @@ class LivePlotObserver:
             if not x_values:
                 return
         
-            # Almacenar los datos en el historial
+            # Persistencia cronológica en el registro histórico de convergencia evolutiva
             self.history.append({
                 "eval": evaluations,
                 "x": x_values, 
@@ -337,24 +349,24 @@ class LivePlotObserver:
             })
             
             # -------------------------------------------------------------------------
-            # 1. GENERAMOS PRIMERO LA GRÁFICA RESUMEN
-            # Esto nos devolverá los límites globales (x e y) calculados para TODO el historial
+            # 1. CONSTRUCCIÓN DE LA REPRESENTACIÓN GRÁFICA ACUMULADA (Summary Plot)
             # -------------------------------------------------------------------------
+            # Ejecución prioritaria del gráfico global para derivar las envolventes ortogonales normativas
             xlims, ylims = self.plot_summary(problem_name, evaluations)
             
             # -------------------------------------------------------------------------
-            # 2. GENERAMOS LA GRÁFICA INDIVIDUAL USANDO LOS LÍMITES DEL RESUMEN
+            # 2. CONSTRUCCIÓN DE LA GRÁFICA DE DISPERSIÓN INDIVIDUAL PUNTUAL
             # -------------------------------------------------------------------------
             fig, ax = plt.subplots(figsize=(6, 4))
             
-            # Renderizar el gráfico de dispersión con el frente actual en amarillo
+            # Renderizado del diagrama de dispersión aplicando el mapa cromático estandarizado de la campaña
             ax.scatter(x_values, y_values, c='yellow', alpha=0.8, edgecolors='black', label=f'Pareto Eval {evaluations}')
              
             ax.set_title(f"Frente de Pareto: Evaluación {evaluations}")
             ax.set_xlabel(self.objective_labels[0])
             ax.set_ylabel(self.objective_labels[1])
             
-            # APLICAMOS LOS LÍMITES EXTRAÍDOS DEL SUMMARY
+            # Sincronización escalar: homogeneización de las vistas individuales respecto al summary acumulado
             if xlims and ylims:
                 ax.set_xlim(xlims)
                 ax.set_ylim(ylims)
@@ -362,6 +374,7 @@ class LivePlotObserver:
             ax.grid(True, linestyle='--', alpha=0.7)
             ax.legend(loc='best')
             
+            # Exportación vectorial a formato PDF de alta resolución espacial para la memoria
             plot_filename = f"{self.output_directory}/front_{evaluations}.pdf"
             plt.savefig(plot_filename, bbox_inches='tight')
             plt.close(fig) 
@@ -370,21 +383,21 @@ class LivePlotObserver:
             
             
     def plot_summary(self, problem_name, current_eval):
-        """Genera un gráfico combinado mostrando la evolución de todos los frentes almacenados y devuelve los ejes."""
+        """
+        Genera una composición gráfica multiespectral combinada, ilustrando la trayectoria espacial
+        e histórica de convergencia de todos los frentes mapeados hasta la iteración contemporánea.
+        """
         print(f"--> Generando gráfica resumen acumulada hasta la evaluación {current_eval}...")
         
         fig, ax = plt.subplots(figsize=(8, 5.5))
         
         total_plots = len(self.history)
         if total_plots > 0:
+            # Inyección de una rampa cromática de tipo Viridis para denotar la evolución temporal
             colors = plt.cm.viridis(np.linspace(0, 1, total_plots))
             
-            # (OPCIONAL) Añadir la zona verde en el summary. Descomenta estas 2 líneas si lo quieres:
-            # rect_summary = patches.Rectangle((-40, 0), -10 - (-40), 3 - 0, linewidth=0, facecolor='green', alpha=0.15)
-            # ax.add_patch(rect_summary)
-            
             for i, data in enumerate(self.history):
-                # Destacar visualmente las iteraciones más recientes
+                # Gradación adaptativa del canal alfa y tamaño para maximizar el contraste de la última población
                 alpha_val = 0.4 if i < total_plots - 1 else 1.0
                 size_val = 40 if i < total_plots - 1 else 80
                 edge_color = 'black' if i == total_plots - 1 else 'none'
@@ -406,31 +419,37 @@ class LivePlotObserver:
             
             ax.legend(loc='upper right', framealpha=0.9, edgecolor='black')
             
-            # ¡LA MAGIA AQUÍ!: Extraemos los límites exactos calculados por Matplotlib
+            # Captura dinámica de las cotas de proyección euclídea computadas de forma automática por Matplotlib
             xlims = ax.get_xlim()
             ylims = ax.get_ylim()
             
+            # Persistencia en formato vectorial del mapa acumulado de optimización
             summary_filename = f"{self.output_directory}/Summary_hasta_eval_{current_eval}.pdf"
             plt.savefig(summary_filename, bbox_inches='tight')
             plt.close(fig)
             
             print(f"--> Gráfica resumen acumulada guardada en: {summary_filename}")
             
-            # Devolvemos los límites al método update()
+            # Retorno de las tuplas dimensionales de escala para la sincronización inter-método
             return xlims, ylims
             
         return None, None
             
+
 class AntenaGraficasObserver(Observer):
+    """
+    Observador de validación y caracterización radioeléctrica. Captura los perfiles analíticos 
+    de campo cercano y lejano computados en la interfaz de CST y los transforma en diagramas 
+    espectrales vectoriales para la evaluación explícita de la ingeniería del dispositivo.
+    """
     def __init__(self, frequency: int, output_directory: str = "Plots_CST"):
         """
-        :param frequency: Cada cuántas evaluaciones queremos generar la gráfica.
-        :param output_directory: Carpeta donde se guardarán las imágenes .pdf.
+        :param frequency: Intervalo periódico o cadencia de evaluación para la actualización gráfica.
+        :param output_directory: Repositorio físico en disco destinado a los reportes electromagnéticos.
         """
         self.frequency = frequency
         self.output_directory = output_directory
         
-        # Crear el directorio si no existe
         if not os.path.isdir(self.output_directory):
             os.makedirs(self.output_directory, exist_ok=True)
 
@@ -440,10 +459,10 @@ class AntenaGraficasObserver(Observer):
 
         if evaluaciones % self.frequency == 0 and soluciones:
             
-            # Cogemos la mejor antena de la generación actual
+            # Extracción de la solución de máxima aptitud o menor dominancia relativo a la población actual
             mejor_antena = soluciones[0]
             
-            # Rescatamos los arrays que escondimos en el evaluate()
+            # Desencapsulado de matrices numéricas asociadas a los descriptores físicos de la antena
             frecuencia = mejor_antena.attributes.get('frecuencia')
             s11_imag = mejor_antena.attributes.get('s11_imag')
             s11_real = mejor_antena.attributes.get('s11_real')
@@ -451,14 +470,14 @@ class AntenaGraficasObserver(Observer):
             frec_farfield = mejor_antena.attributes.get('frec_farfield')
             axial_ratios = mejor_antena.attributes.get('axial_ratios')
             
+            # Interrupción condicional ante colapso numérico del resolvedor tridimensional u omisión de datos
             if frecuencia is None:
-                return # Si la antena dio error en CST y no hay datos, saltamos
+                return 
 
             print(f"--> [Observer] Guardando 4 gráficas PDF de la evaluación {evaluaciones}...")
 
-            # Calcular límites y divisiones (ticks) comunes para el eje X
+            # Cuantización y discretización equidistante de las marcas métricas del eje espectral (X)
             f_min, f_max = min(frecuencia), max(frecuencia)
-            # Generamos 5 marcas exactas equidistantes para el eje X
             x_ticks = np.linspace(f_min, f_max, 5)
 
             # --- S11 Imaginario ---
@@ -485,7 +504,7 @@ class AntenaGraficasObserver(Observer):
             plt.savefig(f"{self.output_directory}/S11_Real_eval_{evaluaciones}.pdf", bbox_inches='tight')
             plt.close()
 
-            # --- S11 dB ---
+            # --- S11 dB (Pérdidas de retorno / Coeficiente de reflexión) ---
             plt.figure(figsize=(7, 5))
             plt.plot(frecuencia, s11_db, color='red')
             plt.title(f'S1,1 (dB) - Eval {evaluaciones}')
@@ -497,7 +516,7 @@ class AntenaGraficasObserver(Observer):
             plt.savefig(f"{self.output_directory}/S11_dB_eval_{evaluaciones}.pdf", bbox_inches='tight')
             plt.close()
             
-            # --- Axial Ratio ---
+            # --- Axial Ratio (Análisis de pureza de polarización circular) ---
             plt.figure(figsize=(7, 5))
             plt.plot(frec_farfield, axial_ratios, color='green', marker='o')
             plt.title(f'Axial Ratio vs Frec - Eval {evaluaciones}')
@@ -509,12 +528,16 @@ class AntenaGraficasObserver(Observer):
             plt.savefig(f"{self.output_directory}/Axial_Ratio_eval_{evaluaciones}.pdf", bbox_inches='tight')
             plt.close()
             
+
 class GuardarResultadosFisicosObserver(Observer):
-    
+    """
+    Observador agnóstico de traducción fenotípica. Intercepta los genotipos mapeados 
+    por el motor bioinspirado (vectores discretos enteros) y los decodifica linealmente 
+    a dimensiones del mundo físico real (mm y grados) para su análisis normativo de fabricación.
+    """
     def __init__(self, frequency: int, algorithm, steps_del_problema: list, output_directory: str = "intermediate_results"):
         """
-        Guarda los archivos FUN y VAR traduciendo los genotipos a dimensiones físicas reales.
-        Diseñado para ser agnóstico: soporta algoritmos evolutivos (NSGA-II) y de enjambre (SMPSO).
+        :param steps_del_problema: Array de granularidad geométrica para el escalado inverso de variables.
         """
         self.frequency = frequency
         self.algorithm = algorithm  
@@ -528,35 +551,35 @@ class GuardarResultadosFisicosObserver(Observer):
         evaluaciones = kwargs["EVALUATIONS"]
         problem = kwargs["PROBLEM"]
 
+        # Extracción segura de la población cromosómica real mediante introspección de atributos
         poblacion_real = getattr(self.algorithm, 'solutions', None)
 
         if evaluaciones % self.frequency == 0 and poblacion_real:
             problem_name = problem.name()
             print(f"--> [Observer] Guardando resultados físicos para {problem_name} en evaluación {evaluaciones}...")
             
-            # Crear una copia superficial para no alterar el flujo del motor de jMetalPy
+            # Duplicación superficial de las estructuras para salvaguardar el hilo de ejecución principal de jMetalPy
             solutions_to_save = poblacion_real.copy()
             
             if hasattr(self.algorithm, 'leaders'):
                 leaders = self.algorithm.leaders.solution_list
-                # Inyectamos líderes histórico sin sobrepasar la mitad de la población
-                # para asegurar la diversidad en caso de un reinicio en caliente (warm-start)
+                # Preservación de diversidad: acotación del reemplazo de líderes a la mitad del censo poblacional
                 max_reemplazos = min(len(leaders), len(solutions_to_save) // 2)
                 for i in range(max_reemplazos):
                     solutions_to_save[i] = leaders[i]
             
-            # Guardar el archivo FUN sincronizado
+            # Sincronización y vuelco del espacio de objetivos (Fichero FUN)
             fun_filename = f"{self.output_directory}/FUN.{problem_name}.{evaluaciones}"
             print_function_values_to_file(solutions_to_save, fun_filename)
 
-            # Guardar el archivo VAR mapeando las variables al mundo físico
+            # Transformación lineal y formateo geométrico del espacio de búsqueda (Fichero VAR)
             var_filename = f"{self.output_directory}/VAR.{problem_name}.{evaluaciones}"
             
             with open(var_filename, "w") as f:
                 for s in solutions_to_save: 
-                    # Traducimos de entero a dimensión física real (mm o grados)
+                    # Mapeo dimensional: decodificación del genotipo discretizado al fenotipo físico continuo
                     vars_fisicas = [var * step for var, step in zip(s.variables, self.steps)]
                     
-                    # Convertimos a texto con 3 decimales y escribimos en disco
+                    # Formateo de cadenas tabuladas con precisión flotante normalizada a 3 decimales
                     linea = "\t".join([f"{v:.3f}" for v in vars_fisicas])
                     f.write(linea + "\n")

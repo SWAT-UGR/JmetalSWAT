@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['src\\jmetal\\problem\\multiobjective\\antenaparche.py', 'codigoTFG\\antenaparche_NSGAII.py', 'codigoTFG\\antenaparche_SMPSO.py']
+recent_files = ['src\\jmetal\\problem\\multiobjective\\antenaparche.py', 'codigoTFG\\antenaparche_NSGAII.py', 'codigoTFG\\antenaparche_SMPSO.py', 'codigoTFG\\Pareto_front.py', '..\\todoexcel.py', 'codigoTFG\\plotCST.py', '..\\Postprocesado\\postproc.py']
 
 [main]
 version = 0.2.0
