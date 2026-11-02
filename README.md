@@ -1,3 +1,50 @@
+# RF Device Optimization Framework (Bachelor's Thesis, University of Granada)
+
+A modular Python framework for automated, multi-objective optimization of radiofrequency (RF) devices. It couples bio-inspired metaheuristics from [jMetalPy](https://github.com/jMetal/jMetalPy) with the 3D full-wave electromagnetic solver **CST Studio Suite** through COM automation.
+
+> Bachelor's Thesis (TFG), *Framework en Python para optimizar dispositivos RF con algoritmos bioinspirados*, Telecommunication Technologies Engineering, Universidad de Granada (ETSIIT), June 2026. Author: Jesús Mateo Ríos. Supervisors: Andrés Biedma Pérez and Pablo Helio Zapata Cano.
+
+## What it does
+
+- **Decoupled architecture:** the search engine (jMetalPy) is independent of the evaluator, so the optimizer stays unchanged if the CST solver is replaced by another one.
+- **Sandboxed evaluation:** every electromagnetic simulation runs in an isolated process with a 600 s timeout; stuck CST instances are killed so the optimization loop keeps going.
+- **Geometric pre-filter:** analytical constraints reject physically invalid antenna geometries before launching any simulation.
+- **Warm start:** a previous population (`VAR`/`FUN` files) can be injected to resume an interrupted run.
+- **Live monitoring:** observers save intermediate results, S11 and axial-ratio plots, and Pareto fronts during the run.
+
+## Case study
+
+Bi-objective design of a circularly polarized microstrip patch antenna at 5 GHz (22 integer-coded geometric variables), minimizing the reflection coefficient (S11) and the axial ratio (AR) for UAV links. NSGA-II and SMPSO were compared with 5,000 evaluations each, in a single-frequency scenario and a 5-frequency scenario (4.8 to 5.2 GHz).
+
+Main results reported in the thesis:
+
+- Best design reaches an axial ratio of **0.41 dB at 5 GHz** with S11 below -10 dB.
+- The native CST optimizer, given twice the budget (10,000 evaluations), could not match it. It also lacks a true multi-objective formulation and only supports a weighted sum.
+- SMPSO saved about 64 h (single-frequency) and 49 h (multi-frequency) of total compute time compared with NSGA-II.
+
+## Repository layout
+
+| Path | Content |
+| --- | --- |
+| `codigoTFG/` | Launch scripts, configuration files and Pareto-front post-processing for the thesis experiments (see its README) |
+| `src/jmetal/problem/multiobjective/antenaparche.py` | The antenna optimization problem: CST co-simulation, sandbox, constraints |
+| `src/jmetal/util/observer.py`, `src/jmetal/util/generator.py` | Custom observers and the file-based population injector (warm start) |
+| everything else | jMetalPy base code (see below) |
+
+## Requirements
+
+- Python 3.10 to 3.12 and the dependencies of jMetalPy (`pip install -e .`).
+- **CST Studio Suite** with its Python libraries (a licence is required; the thesis used an academic licence). Without CST the problem classes import but real simulations cannot run.
+- A CST macro template for the patch antenna. It is not included in this repository.
+
+## Acknowledgements and license
+
+This project builds on [jMetalPy](https://github.com/jMetal/jMetalPy) (A. J. Nebro et al., MIT license), whose original README is kept below. The MIT license of this repository is the original one.
+
+---
+
+# Upstream project: jMetalPy
+
 ![jMetalPy](docs/source/jmetalpy.png)
 
 [![CI](https://github.com/jMetal/jMetalPy/actions/workflows/ci.yml/badge.svg)](https://github.com/jMetal/jMetalPy/actions/workflows/ci.yml)

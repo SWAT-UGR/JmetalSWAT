@@ -3,3 +3,7 @@ __pycache__
 build
 dist
 .vscode
+
+# IDE / environment metadata
+.spyproject
+anaconda_projects
